@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Container;
 use App\Models\Customer;
+use App\Models\StorageRow;
 use App\Models\Warehouse;
 use App\Services\AccessCalculator;
 use App\Services\Actor;
@@ -169,9 +170,41 @@ class Board extends Component
         $this->returnCustomerId = $container->customer_id;
     }
 
-    public function illegalDrop(): void
+    /**
+     * Et slip uden for de grønne pladser. Er der sluppet på en stak, siges det, hvorfor den ikke kan bruges.
+     *
+     * @param  string|null  $column  "rækkeId:dybde" for den stak, der blev sluppet på
+     */
+    public function illegalDrop(?int $containerId = null, ?string $column = null): void
     {
-        $this->flash('Det er ikke en lovlig plads. Kun de grønne pladser kan bruges.', 'error');
+        $this->flash($this->illegalDropReason($containerId, $column), 'error');
+    }
+
+    private function illegalDropReason(?int $containerId, ?string $column): string
+    {
+        $fallback = 'Det er ikke en lovlig plads. Kun de grønne pladser kan bruges.';
+
+        if ($column === null || ! preg_match('/^(\d+):(\d+)$/', $column, $m)) {
+            return $fallback;
+        }
+
+        $row = StorageRow::query()->find((int) $m[1]);
+        $depth = (int) $m[2];
+
+        if ($row === null || $depth < 1 || $depth > $row->depth) {
+            return $fallback;
+        }
+
+        $grid = RowGrid::load($row)->without($containerId);
+        $count = $grid->countInColumn($depth);
+
+        if ($count >= $row->height) {
+            return 'Stakken er fuld. Vælg en af de grønne pladser.';
+        }
+
+        $reason = $grid->whyCannotPlace($depth, $count + 1);
+
+        return $reason === null ? $fallback : $reason.' Vælg en af de grønne pladser.';
     }
 
     public function cancelConfirm(): void

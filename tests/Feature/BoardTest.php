@@ -156,3 +156,26 @@ it('shows a clear error when an admin shrinks a row with containers on it', func
 
     expect($this->a->fresh()->depth)->toBe(10);
 });
+
+it('explains why a stack without a green slot cannot be used', function () {
+    $buffer = row('Lager 1 · Buffer 1');
+    fillColumns($buffer, [1]);
+    $c = putAt($this->a, 1, 1);
+
+    session(['operator_id' => $this->op->id]);
+
+    Livewire::test(Board::class)
+        ->call('illegalDrop', $c->id, $buffer->id.':1')
+        ->assertSet('noticeType', 'error')
+        ->assertSet('notice', 'Stakken er fuld. Vælg en af de grønne pladser.');
+
+    putAt($this->b, 1, 1);
+
+    Livewire::test(Board::class)
+        ->call('illegalDrop', $c->id, $this->b->id.':5')
+        ->assertSet('notice', 'Der står containere foran pladsen. Vælg en af de grønne pladser.');
+
+    Livewire::test(Board::class)
+        ->call('illegalDrop')
+        ->assertSet('notice', 'Det er ikke en lovlig plads. Kun de grønne pladser kan bruges.');
+});

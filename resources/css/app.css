@@ -51,7 +51,9 @@
     .drop-deliver-floating {
         @apply fixed bottom-4 left-1/2 z-40 w-[min(92vw,32rem)] -translate-x-1/2 shadow-xl;
         min-height: 5.5rem;
+        transition: opacity 120ms;
     }
+    .drop-deliver-floating.is-faded { opacity: 0.2; }
 
     .chip-grip { touch-action: none; cursor: grab; }
 

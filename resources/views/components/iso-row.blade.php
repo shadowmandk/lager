@@ -64,7 +64,7 @@
                     $customer = $c->customer ? \Illuminate\Support\Str::limit($c->customer->name, 13, '…') : 'Ingen kunde';
                 @endphp
                 <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked])
-                   data-container-id="{{ $c->id }}"
+                   data-container-id="{{ $c->id }}" data-col="{{ $row->id }}:{{ $d }}"
                    @if ($isTake)
                        data-drag-id="{{ $c->id }}" data-drag-kind="stored" data-from="{{ $key }}"
                        data-drag-number="{{ $c->number }}" data-drag-label="{{ $customer }}" data-drag-color="{{ $col['side'] }}"
@@ -105,7 +105,7 @@
             @else
                 @php $isPickTarget = isset($pickTargets[$key]); @endphp
                 <rect @class(['slot', 'is-target' => $isPickTarget])
-                      data-slot="{{ $key }}"
+                      data-slot="{{ $key }}" data-col="{{ $row->id }}:{{ $d }}"
                       x="{{ $x + 1 }}" y="{{ $y + 1 }}" width="{{ $W - 2 }}" height="{{ $H - 2 }}" rx="4"
                       pointer-events="all"
                       @if ($isPickTarget) wire:click="prepare({{ $picked->id }}, @js($pickedFrom), '{{ $key }}')" @endif>

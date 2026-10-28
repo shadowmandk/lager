@@ -99,8 +99,7 @@ export default ({ pingUrl }) => ({
     up(e) {
         const dragging = this.dragging;
         const press = this.press;
-        const drop = dragging ? this.dropKeyAt(e.clientX, e.clientY) : null;
-        const overSlot = dragging ? this.elementAt(e.clientX, e.clientY)?.closest('[data-slot]') : null;
+        const drop = dragging ? this.resolveDrop(e.clientX, e.clientY) : null;
 
         this.cancel();
 
@@ -113,10 +112,11 @@ export default ({ pingUrl }) => ({
         this.justDragged = true;
         setTimeout(() => (this.justDragged = false), 400);
 
-        if (drop) {
-            this.$wire.prepare(dragging.id, dragging.from, drop);
-        } else if (overSlot) {
-            this.$wire.illegalDrop();
+        if (drop.key) {
+            this.$wire.prepare(dragging.id, dragging.from, drop.key);
+        } else if (drop.column && drop.column !== dragging.ownColumn) {
+            // Sluppet på en stak uden grøn plads. Slip tilbage på egen stak er bare en fortrydelse.
+            this.$wire.illegalDrop(dragging.id, drop.column);
         }
     },
 
@@ -152,7 +152,14 @@ export default ({ pingUrl }) => ({
         ghost.querySelector('.lbl').textContent = el.dataset.dragLabel || '';
         document.body.appendChild(ghost);
 
-        this.dragging = { id: press.id, kind, from, targets, ghost, ctr };
+        // Hver stak har højst én lovlig plads. Slip et vilkårligt sted på stakken lander der.
+        const byColumn = new Map();
+        targets.forEach((k) => {
+            if (k !== 'deliver') byColumn.set(k.split(':').slice(0, 2).join(':'), k);
+        });
+        const ownColumn = from ? from.split(':').slice(0, 2).join(':') : null;
+
+        this.dragging = { id: press.id, kind, from, targets, byColumn, ownColumn, ghost, ctr };
         this.placeGhost(x, y);
         navigator.vibrate?.(25);
     },
@@ -181,31 +188,70 @@ export default ({ pingUrl }) => ({
         if (this.dragging) this.dragging.ghost.style.transform = `translate(${x - 56}px, ${y - 70}px) rotate(-3deg)`;
     },
 
-    elementAt(x, y) {
-        return document.elementFromPoint(x, y);
+
+    /**
+     * Hvor lander et slip? Ser gennem alt under fingeren, så den svævende udleveringsboks
+     * ikke skjuler en grøn plads bag sig.
+     *
+     * @returns {{ key: string|null, column: string|null, deliverEl: Element|null }}
+     */
+    resolveDrop(x, y) {
+        const none = { key: null, column: null, deliverEl: null };
+        const d = this.dragging;
+        if (!d) return none;
+
+        const stack = document.elementsFromPoint(x, y);
+        if (!stack.length || stack[0].closest('header')) return none;
+
+        let column = null;
+        let deliverEl = null;
+
+        for (const el of stack) {
+            column ??= el.closest('[data-col]')?.dataset.col ?? null;
+            deliverEl ??= el.closest('[data-drop="deliver"]');
+        }
+
+        if (column && d.byColumn.has(column)) return { key: d.byColumn.get(column), column, deliverEl };
+        if (deliverEl && d.targets.has('deliver')) return { key: 'deliver', column, deliverEl };
+        if (!column) {
+            const near = this.nearestTarget(x, y, 30);
+            if (near) return { key: near, column: null, deliverEl };
+        }
+
+        return { key: null, column, deliverEl };
     },
 
-    dropKeyAt(x, y) {
-        const hit = this.elementAt(x, y);
-        if (!hit || !this.dragging) return null;
+    /** Nærmeste grønne plads inden for en lille afstand, til slip i mellemrummet mellem stakke. */
+    nearestTarget(x, y, radius) {
+        let best = null;
+        let bestDist = radius;
 
-        const slot = hit.closest('[data-slot]');
-        if (slot && this.dragging.targets.has(slot.dataset.slot)) return slot.dataset.slot;
+        this.$root.querySelectorAll('[data-slot]').forEach((s) => {
+            if (!this.dragging.targets.has(s.dataset.slot)) return;
+            const b = s.getBoundingClientRect();
+            const dx = Math.max(b.left - x, 0, x - b.right);
+            const dy = Math.max(b.top - y, 0, y - b.bottom);
+            const dist = Math.hypot(dx, dy);
+            if (dist < bestDist) {
+                best = s.dataset.slot;
+                bestDist = dist;
+            }
+        });
 
-        if (hit.closest('[data-drop="deliver"]') && this.dragging.targets.has('deliver')) return 'deliver';
-
-        return null;
+        return best;
     },
 
     hover(x, y) {
-        const key = this.dropKeyAt(x, y);
-        this.$root.querySelectorAll('.is-hover').forEach((n) => n.classList.remove('is-hover'));
+        const { key, deliverEl } = this.resolveDrop(x, y);
+        this.$root.querySelectorAll('.is-hover, .is-faded').forEach((n) => n.classList.remove('is-hover', 'is-faded'));
         if (!key) return;
 
         if (key === 'deliver') {
-            this.elementAt(x, y)?.closest('[data-drop="deliver"]')?.classList.add('is-hover');
+            deliverEl?.classList.add('is-hover');
         } else {
             this.$root.querySelector(`[data-slot="${key}"]`)?.classList.add('is-hover');
+            // Ligger udleveringsboksen oven på pladsen, gøres den gennemsigtig, så pladsen kan ses.
+            if (deliverEl?.classList.contains('drop-deliver-floating')) deliverEl.classList.add('is-faded');
         }
     },
 
@@ -225,7 +271,7 @@ export default ({ pingUrl }) => ({
                 // Pladser, som serveren har markeret i "vælg"-tilstand, beholder markeringen.
                 if (!n.hasAttribute('wire:click')) n.classList.remove('is-target');
             });
-            this.$root.querySelectorAll('.is-hover').forEach((n) => n.classList.remove('is-hover'));
+            this.$root.querySelectorAll('.is-hover, .is-faded').forEach((n) => n.classList.remove('is-hover', 'is-faded'));
         }
 
         this.press = null;
