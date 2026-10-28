@@ -7,3 +7,89 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+@layer base {
+    [x-cloak] { display: none !important; }
+
+    html { -webkit-tap-highlight-color: transparent; }
+
+    input[type='search']::-webkit-search-cancel-button { display: none; }
+
+    input[type='text'], input[type='search'], input[type='email'], input[type='password'], input[type='number'], select {
+        @apply rounded-lg border border-slate-300 bg-white px-3 text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-300;
+    }
+
+    button:not(:disabled), [role='button'] { cursor: pointer; }
+}
+
+@layer components {
+    .nav-btn {
+        @apply flex h-11 items-center rounded-lg px-3 text-base font-medium text-slate-200 hover:bg-slate-700;
+    }
+    .nav-btn-active { @apply bg-slate-600 text-white; }
+
+    .tab-btn {
+        @apply h-9 rounded-md px-4 text-base font-semibold text-slate-200;
+    }
+    .tab-btn-active { @apply bg-white text-slate-900 shadow; }
+
+    .btn-primary {
+        @apply inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 font-semibold text-white shadow-sm active:bg-emerald-700;
+    }
+    .btn-secondary {
+        @apply inline-flex items-center justify-center rounded-xl bg-white px-4 font-semibold text-slate-800 shadow-sm ring-1 ring-slate-300 active:bg-slate-50;
+    }
+    .btn-danger {
+        @apply inline-flex items-center justify-center rounded-xl bg-white px-4 font-semibold text-red-700 shadow-sm ring-1 ring-red-200 active:bg-red-50;
+    }
+
+    .drop-deliver {
+        @apply flex min-h-16 items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white px-4 text-lg font-semibold text-slate-500;
+    }
+    .drop-deliver.is-target { @apply border-emerald-500 bg-emerald-50 text-emerald-800; cursor: pointer; }
+    .drop-deliver.is-hover { @apply border-solid bg-emerald-200; }
+    .drop-deliver-floating {
+        @apply fixed bottom-4 left-1/2 z-40 w-[min(92vw,32rem)] -translate-x-1/2 shadow-xl;
+        min-height: 5.5rem;
+    }
+
+    .chip-grip { touch-action: none; cursor: grab; }
+
+    .drag-ghost {
+        position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none;
+        @apply flex flex-col items-center justify-center rounded-md px-3 py-2 text-white shadow-2xl;
+        min-width: 7rem; transform-origin: center;
+        border: 2px solid rgb(255 255 255 / 0.8);
+    }
+    .drag-ghost .num { font-size: 1.25rem; font-weight: 700; line-height: 1.1; }
+    .drag-ghost .lbl { font-size: 0.8rem; opacity: 0.95; }
+}
+
+/* Isometrisk tavle */
+.iso-row { overflow: visible; }
+.iso-row .iso-num { font: 700 14px var(--font-sans); }
+.iso-row .iso-cust { font: 600 9.5px var(--font-sans); }
+.iso-row .iso-small { font: 500 10px var(--font-sans); fill: #64748b; }
+
+.iso-row .ctr { cursor: pointer; transition: opacity 120ms; }
+.iso-row .ctr-take { cursor: grab; touch-action: none; }
+.iso-row .ctr-dim { opacity: 0.18; }
+.iso-row .ctr-lifted, .iso-row .ctr-picked { opacity: 0.35; }
+.iso-row .take-ring { fill: none; stroke: #16a34a; stroke-width: 3; }
+.iso-row .match-ring { fill: none; stroke: #f59e0b; stroke-width: 3.5; }
+
+.iso-row .slot { fill: #f8fafc; fill-opacity: 0.6; stroke: #cbd5e1; stroke-width: 1.2; stroke-dasharray: 4 3; }
+.iso-row .slot.is-target {
+    fill: #22c55e; fill-opacity: 0.28; stroke: #16a34a; stroke-width: 2.5; stroke-dasharray: none; cursor: pointer;
+    animation: target-pulse 1.4s ease-in-out infinite;
+}
+.iso-row .slot.is-hover { fill-opacity: 0.65; animation: none; }
+
+@keyframes target-pulse {
+    0%, 100% { fill-opacity: 0.18; }
+    50% { fill-opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .iso-row .slot.is-target { animation: none; }
+}

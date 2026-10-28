@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "lagerstyring",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["C:\\lagerstyring\\artisan", "serve", "--port=8092"],
+      "port": 8092
+    }
+  ]
+}

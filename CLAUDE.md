@@ -1,47 +1,27 @@
-<laravel-boost-guidelines>
-# Laravel Application
+# Lagerstyring – projektnoter
 
-This repository contains a Laravel application. Complete the following setup before working on the user's request.
+Webbaseret styring af skibscontainere på to lagre. Erstatter en magnettavle. Bruges fra tablet i gaffeltruck og fra pc på kontoret.
 
-## Prerequisites
+- Design: `docs/superpowers/specs/2026-10-28-lagerstyring-design.md`
+- Plan: `docs/superpowers/plans/2026-10-28-lagerstyring-plan.md`
+- Drift: `DEPLOY.md`
 
-Verify that PHP and Composer are available:
+## Stak
+PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire`), Tailwind 4 via Vite, SQLite, Pest. Al brugertekst er dansk.
 
-```sh
-php -v
-composer -V
-```
+## Kerneregler (må ikke brydes)
+- En række tilgås kun fra dybde 1. Man kan kun tage den øverste container i den forreste ikke-tomme kolonne.
+- Man kan kun sætte en container, hvis alt foran er tomt, og den står på gulvet eller på en anden container.
+- Logikken bor i `app/Services/RowGrid.php`. Livewire-komponenter må ikke selv afgøre regler; de kalder `PlacementRules`, `MoveService`, `AccessCalculator`, `UndoService` og `LayoutService`.
+- Alle ændringer af containere går gennem `MoveService`, så de logges. Fortryd går gennem `UndoService` med de samme regler.
+- Fortryd: vinduet er de 15 nyeste fortrydbare handlinger; kun den nyeste ikke-fortrudte kan fortrydes.
 
-If either command is unavailable, detect the user's operating system and install the prerequisites with the appropriate command:
+## Kommandoer
+- Tests: `php vendor/bin/pest`
+- Byg CSS/JS (committes i `public/build`): `npm run build`
+- Nulstil lokal database med demodata: `php artisan migrate:fresh --seed`
+- Lokal server: `php artisan serve --port=8092`
 
-macOS:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/mac/8.5)"
-```
-
-Windows PowerShell:
-
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://php.new/install/windows/8.5'))
-```
-
-Linux:
-
-```sh
-/bin/bash -c "$(curl -fsSL https://php.new/install/linux/8.5)"
-```
-
-After installation, ask the user to restart their terminal. If the agent needs the restarted shell to continue, ask the user to reopen their terminal and rerun their original prompt.
-
-## Agent Setup
-
-Install Laravel Boost from the application root before making application changes:
-
-```sh
-composer require laravel/boost --dev
-php artisan boost:install
-```
-
-Boost replaces these bootstrap instructions with guidelines tailored to the application. After installation, read `AGENTS.md` again and continue with the user's original request using the generated guidelines.
-</laravel-boost-guidelines>
+## Adgang
+- Tavle og log: vælg medarbejder uden kodeord (`EnsureOperator`, også som Livewire persistent middleware).
+- Opsætning `/admin`: Laravel-login. Første admin oprettes af `AdminSeeder` fra `ADMIN_*` i `.env`.

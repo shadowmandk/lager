@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'required' => ':Attribute skal udfyldes.',
+    'string' => ':Attribute skal være tekst.',
+    'integer' => ':Attribute skal være et heltal.',
+    'boolean' => ':Attribute skal være ja eller nej.',
+    'email' => ':Attribute skal være en gyldig e-mailadresse.',
+    'unique' => ':Attribute er allerede i brug.',
+    'exists' => 'Den valgte :attribute findes ikke.',
+    'in' => 'Den valgte :attribute er ugyldig.',
+    'confirmed' => ':Attribute stemmer ikke overens.',
+    'min' => [
+        'numeric' => ':Attribute skal være mindst :min.',
+        'string' => ':Attribute skal være mindst :min tegn.',
+    ],
+    'max' => [
+        'numeric' => ':Attribute må højst være :max.',
+        'string' => ':Attribute må højst være :max tegn.',
+    ],
+
+    'attributes' => [
+        'email' => 'e-mail',
+        'password' => 'adgangskode',
+        'editName' => 'navn',
+        'editCustomerId' => 'kunde',
+        'newWarehouse' => 'lagerets navn',
+        'newZone.name' => 'områdets navn',
+        'newRow.name' => 'rækkens navn',
+        'newRow.depth' => 'dybde',
+        'newRow.height' => 'højde',
+        'rowEdit.name' => 'rækkens navn',
+        'rowEdit.depth' => 'dybde',
+        'rowEdit.height' => 'højde',
+        'customerForm.number' => 'kundenummer',
+        'customerForm.name' => 'kundenavn',
+        'operatorName' => 'navn',
+        'adminForm.name' => 'navn',
+        'adminForm.email' => 'e-mail',
+        'adminForm.password' => 'adgangskode',
+        'containerForm.number' => 'containernummer',
+        'containerForm.name' => 'navn',
+        'containerForm.customer_id' => 'kunde',
+        'containerForm.status' => 'status',
+        'minutesPerMove' => 'minutter pr. flytning',
+    ],
+];
