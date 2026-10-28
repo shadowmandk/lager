@@ -19,6 +19,13 @@
         </div>
 
         <div class="space-y-4 px-4 pb-6">
+            @if ($c->microbizz_removed_at)
+                <div class="rounded-xl bg-amber-100 p-3 text-amber-900 ring-1 ring-amber-200">
+                    <div class="font-semibold">Fjernet i Microbizz</div>
+                    <p>Containeren er slettet eller deaktiveret i Microbizz, men står stadig her. Spørg kontoret.</p>
+                </div>
+            @endif
+
             @if ($c->isInTransit())
                 <div class="rounded-xl bg-sky-50 p-4 ring-1 ring-sky-200">
                     <div class="text-sm font-semibold uppercase tracking-wide text-sky-700">I transit</div>
@@ -93,6 +100,11 @@
                 @endforeach
             @endif
 
+            @if ($c->isFromMicrobizz())
+                <div class="rounded-xl bg-sky-50 p-3 text-sky-900 ring-1 ring-sky-200">
+                    Nummer, navn og kunde kommer fra Microbizz og rettes der.
+                </div>
+            @else
             <form wire:submit="savePanel" class="space-y-3 rounded-xl ring-1 ring-slate-200 p-3">
                 <div class="text-sm font-semibold uppercase tracking-wide text-slate-500">Ret oplysninger</div>
                 <label class="block">
@@ -111,6 +123,7 @@
                 @error('editName') <p class="text-sm text-red-700">{{ $message }}</p> @enderror
                 <button type="submit" class="btn-secondary h-12 w-full">Gem</button>
             </form>
+            @endif
 
             <div>
                 <div class="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Seneste handlinger</div>

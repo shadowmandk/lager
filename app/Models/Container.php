@@ -36,7 +36,7 @@ class Container extends Model
         self::TRANSIT => 'I transit',
     ];
 
-    protected $fillable = ['number', 'name', 'customer_id', 'status', 'storage_row_id', 'depth', 'level'];
+    protected $fillable = ['number', 'name', 'customer_id', 'status', 'storage_row_id', 'depth', 'level', 'microbizz_id', 'microbizz_removed_at'];
 
     protected function casts(): array
     {
@@ -45,7 +45,15 @@ class Container extends Model
             'depth' => 'integer',
             'level' => 'integer',
             'customer_id' => 'integer',
+            'microbizz_id' => 'integer',
+            'microbizz_removed_at' => 'datetime',
         ];
+    }
+
+    /** Kommer fra Microbizz, som bestemmer nummer, navn og kunde. */
+    public function isFromMicrobizz(): bool
+    {
+        return $this->microbizz_id !== null;
     }
 
     public function customer(): BelongsTo

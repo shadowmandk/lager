@@ -55,7 +55,7 @@ final class MoveService
         });
     }
 
-    /** En udleveret container kommer hjem og sættes på en plads. Kunden kan skiftes. */
+    /** En udleveret container kommer hjem og sættes på en plads. Kunden kan skiftes, medmindre Microbizz bestemmer den. */
     public function returnHome(Container $container, Slot $target, ?int $customerId, Actor $actor): Activity
     {
         return $this->transaction(function () use ($container, $target, $customerId, $actor) {
@@ -66,6 +66,10 @@ final class MoveService
             }
 
             $this->assertCanPlace($target);
+
+            if ($container->isFromMicrobizz()) {
+                $customerId = $container->customer_id;
+            }
 
             return $this->apply($container, Activity::RETURNED, $actor,
                 status: Container::STORED, slot: $target, customerId: $customerId);
@@ -133,6 +137,10 @@ final class MoveService
         return $this->transaction(function () use ($container, $name, $customerId, $actor) {
             $container = $this->fresh($container);
             $name = $this->cleanName($name);
+
+            if ($container->isFromMicrobizz()) {
+                throw new MoveRejected(MoveRejected::MICROBIZZ);
+            }
 
             if ($container->name === $name && $container->customer_id === $customerId) {
                 return null;
@@ -327,6 +335,7 @@ final class MoveService
             'from_name' => $before['name'] ?? null,
             'to_name' => $after['name'],
             'undoes_id' => $undoesId,
+            'source' => $actor->source,
         ]);
     }
 

@@ -9,6 +9,10 @@ use App\Models\Warehouse;
 use App\Services\AccessCalculator;
 use App\Services\Actor;
 use App\Services\LocationLabel;
+use App\Services\Microbizz\MicrobizzClient;
+use App\Services\Microbizz\MicrobizzException;
+use App\Services\Microbizz\MicrobizzImporter;
+use App\Services\Microbizz\MicrobizzSettings;
 use App\Services\MoveRejected;
 use App\Services\MoveService;
 use App\Services\PlacementRules;
@@ -103,6 +107,12 @@ class Board extends Component
 
     public function openCreate(): void
     {
+        if (app(MicrobizzClient::class)->isConfigured()) {
+            $this->syncMicrobizz();
+
+            return;
+        }
+
         $this->resetValidation();
         $this->newContainer = ['number' => '', 'name' => '', 'customer_id' => ''];
         $this->creating = true;
@@ -114,12 +124,37 @@ class Board extends Component
         $this->creating = false;
     }
 
+    /** "Hent nye fra Microbizz": en container, der står i porten, kan hentes uden at vente på næste time. */
+    public function syncMicrobizz(): void
+    {
+        try {
+            $run = app(MicrobizzImporter::class)->run('board');
+        } catch (MicrobizzException $e) {
+            $this->flash($e->getMessage(), 'error');
+
+            return;
+        }
+
+        match (true) {
+            ! $run->isOk() => $this->flash('Hentningen fejlede: '.$run->error, 'error'),
+            ! MicrobizzSettings::hasFilter() => $this->flash('Der hentes ingen containere endnu. Kontoret skal først vælge under Opsætning, hvilket udstyr der er containere.', 'error'),
+            default => $this->flash('Hentet fra Microbizz: '.$run->summary().'.'),
+        };
+    }
+
     /**
      * Opret en container, der lige er kommet ind. Den venter på plads og er valgt med det samme,
      * så de grønne pladser lyser og den kan sættes med ét tryk.
      */
     public function createContainer(): void
     {
+        if (app(MicrobizzClient::class)->isConfigured()) {
+            $this->creating = false;
+            $this->flash('Nye containere oprettes i Microbizz. Tryk “Hent nye fra Microbizz”.', 'error');
+
+            return;
+        }
+
         $data = $this->validate([
             'newContainer.number' => ['required', 'string', 'max:30'],
             'newContainer.name' => ['nullable', 'string', 'max:100'],
@@ -225,6 +260,7 @@ class Board extends Component
             'target' => $target,
             'toLabel' => $toLabel,
             'warnings' => $warnings,
+            'fromMicrobizz' => $container->isFromMicrobizz(),
         ];
         $this->returnCustomerId = $container->customer_id;
     }
@@ -414,6 +450,12 @@ class Board extends Component
             return;
         }
 
+        if ($container->isFromMicrobizz()) {
+            $this->flash(MoveRejected::MICROBIZZ, 'error');
+
+            return;
+        }
+
         $this->validate([
             'editName' => ['nullable', 'string', 'max:100'],
             'editCustomerId' => ['nullable', 'integer', 'exists:customers,id'],
@@ -489,6 +531,7 @@ class Board extends Component
             'deliveredCount' => Container::query()->where('status', Container::DELIVERED)->count(),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'number']),
             'panel' => $this->panelData(),
+            'microbizzOn' => app(MicrobizzClient::class)->isConfigured(),
             'version' => BoardVersion::current(),
         ]);
     }

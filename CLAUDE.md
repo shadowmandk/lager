@@ -17,6 +17,7 @@ PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire
 - Fortryd: vinduet er de 15 nyeste fortrydbare handlinger; kun den nyeste ikke-fortrudte kan fortrydes.
 - Flytning mellem lagre går via status `transit`: containeren holder sin reserverede bufferplads i placeringsfelterne (`Container::location()`), kan ikke tages, og intet kan sættes oven på den. `slot()` gælder kun containere på lager. Brug `Container::ON_SLOT`, når optagne pladser skal tælles.
 - Pladsnavne: "Lager 1 · A 3 2" (række, plads fra indgangen, højde nedefra), bufferstakke "Buffer 2 1". Laves af `StorageRow::slotName` og `LocationLabel`.
+- Microbizz (`app/Services/Microbizz`) er master for kunder og containeres nummer, navn og kunde; systemet skriver aldrig tilbage. Koblede poster har `microbizz_id` og må ikke rettes her (`isFromMicrobizz()`). Hentningen må aldrig ændre status eller plads for en eksisterende container. Slået fra, når `MICROBIZZ_*` i `.env` er tomme. Tests bruger den falske Microbizz i `tests/Feature/MicrobizzTest.php`.
 
 ## Kommandoer
 - Tests: `php vendor/bin/pest`

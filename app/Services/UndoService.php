@@ -109,9 +109,14 @@ final class UndoService
                 $this->moves->assertCanTake($container);
 
                 return $this->moves->apply($container, Activity::UNDONE, $actor,
-                    status: Container::DELIVERED, slot: null, customerId: $a->from_customer_id, undoesId: $a->id);
+                    status: Container::DELIVERED, slot: null,
+                    customerId: $container->isFromMicrobizz() ? false : $a->from_customer_id, undoesId: $a->id);
 
             case Activity::EDITED:
+                if ($container->isFromMicrobizz()) {
+                    throw new MoveRejected(MoveRejected::MICROBIZZ);
+                }
+
                 return $this->moves->apply($container, Activity::UNDONE, $actor,
                     customerId: $a->from_customer_id, name: $a->from_name, undoesId: $a->id);
 

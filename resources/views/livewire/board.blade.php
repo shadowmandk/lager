@@ -140,10 +140,19 @@
             @endif
 
             <section class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
-                <button type="button" wire:click="openCreate" class="btn-primary mb-3 flex h-14 w-full items-center justify-center gap-2 text-lg">
-                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    Ny container
-                </button>
+                @if ($microbizzOn)
+                    <button type="button" wire:click="syncMicrobizz" wire:loading.attr="disabled" wire:target="syncMicrobizz"
+                            class="btn-primary mb-3 flex h-14 w-full items-center justify-center gap-2 text-lg disabled:opacity-60">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 4v11m-5-5l5 5 5-5M5 20h14"/></svg>
+                        <span wire:loading.remove wire:target="syncMicrobizz">Hent nye fra Microbizz</span>
+                        <span wire:loading wire:target="syncMicrobizz">Henter …</span>
+                    </button>
+                @else
+                    <button type="button" wire:click="openCreate" class="btn-primary mb-3 flex h-14 w-full items-center justify-center gap-2 text-lg">
+                        <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                        Ny container
+                    </button>
+                @endif
                 <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Venter på plads ({{ $pendingList->count() }})</h2>
                 <div class="space-y-2">
                     @forelse ($pendingList as $c)
@@ -225,7 +234,7 @@
                     </p>
                 @endif
 
-                @if ($confirm['type'] === 'return')
+                @if ($confirm['type'] === 'return' && ! ($confirm['fromMicrobizz'] ?? false))
                     <label class="mt-4 block">
                         <span class="text-sm font-medium text-slate-600">Kunde fremover</span>
                         <select wire:model="returnCustomerId" class="mt-1 h-12 w-full rounded-lg border-slate-300 text-lg">
