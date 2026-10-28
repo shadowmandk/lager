@@ -72,6 +72,7 @@
 .iso-row .iso-num { font: 700 14px var(--font-sans); }
 .iso-row .iso-cust { font: 600 9.5px var(--font-sans); }
 .iso-row .iso-small { font: 500 10px var(--font-sans); fill: #64748b; }
+.iso-row .iso-axis { font: 700 12px var(--font-sans); fill: #475569; }
 
 .iso-row .ctr { cursor: pointer; transition: opacity 120ms; }
 .iso-row .ctr-take { cursor: grab; touch-action: none; }
@@ -79,6 +80,9 @@
 .iso-row .ctr-lifted, .iso-row .ctr-picked { opacity: 0.35; }
 .iso-row .take-ring { fill: none; stroke: #16a34a; stroke-width: 3; }
 .iso-row .match-ring { fill: none; stroke: #f59e0b; stroke-width: 3.5; }
+/* På vej fra det andet lager: reserveret plads, gennemsigtig med blå stiplet kant */
+.iso-row .ctr-transit > :not(.transit-ring):not(text) { opacity: 0.35; }
+.iso-row .transit-ring { fill: none; stroke: #0284c7; stroke-width: 2.5; stroke-dasharray: 6 4; }
 
 .iso-row .slot { fill: #f8fafc; fill-opacity: 0.6; stroke: #cbd5e1; stroke-width: 1.2; stroke-dasharray: 4 3; }
 .iso-row .slot.is-target {

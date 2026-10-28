@@ -350,8 +350,8 @@ class Admin extends Component
     {
         $container = Container::query()->findOrFail($id);
 
-        if ($container->isStored()) {
-            $this->flash("Container {$container->number} står på lageret. Udlevér eller flyt den væk fra tavlen først.", 'error');
+        if ($container->occupiesSlot()) {
+            $this->flash("Container {$container->number} står på lageret eller er i transit. Udlevér den eller flyt den væk fra tavlen først.", 'error');
 
             return;
         }
@@ -381,7 +381,7 @@ class Admin extends Component
         $data += match ($this->tab) {
             'layout' => [
                 'warehouses' => Warehouse::query()->with('zones.rows')->orderBy('sort')->orderBy('id')->get(),
-                'counts' => Container::query()->where('status', Container::STORED)
+                'counts' => Container::query()->whereIn('status', Container::ON_SLOT)
                     ->selectRaw('storage_row_id, count(*) as n')->groupBy('storage_row_id')->pluck('n', 'storage_row_id'),
             ],
             'customers' => [

@@ -23,20 +23,25 @@ final class RowGrid
     public static function load(StorageRow $row): self
     {
         $containers = Container::query()
-            ->where('status', Container::STORED)
+            ->whereIn('status', Container::ON_SLOT)
             ->where('storage_row_id', $row->id)
             ->get();
 
         return self::fromContainers($row, $containers);
     }
 
-    /** @param iterable<Container> $containers */
+    /**
+     * Containere i transit optager deres reserverede plads, men står der ikke endnu:
+     * de kan ikke tages, og intet kan sættes oven på dem.
+     *
+     * @param  iterable<Container>  $containers
+     */
     public static function fromContainers(StorageRow $row, iterable $containers): self
     {
         $grid = new self($row);
 
         foreach ($containers as $container) {
-            if ($container->isStored() && $container->storage_row_id === $row->id) {
+            if ($container->occupiesSlot() && $container->storage_row_id === $row->id) {
                 $grid->cells[$container->depth][$container->level] = $container;
             }
         }
@@ -96,7 +101,17 @@ final class RowGrid
             return null;
         }
 
-        return $this->cells[$front][max(array_keys($this->cells[$front]))];
+        $top = $this->cells[$front][max(array_keys($this->cells[$front]))];
+
+        return $top->isInTransit() ? null : $top;
+    }
+
+    /** Står der en container i transit øverst i kolonnen? */
+    private function transitOnTop(int $depth): bool
+    {
+        $column = $this->cells[$depth] ?? [];
+
+        return $column !== [] && $column[max(array_keys($column))]->isInTransit();
     }
 
     /**
@@ -148,6 +163,10 @@ final class RowGrid
 
         if ($level > 1 && $this->at($depth, $level - 1) === null) {
             return 'Der står ingen container under pladsen.';
+        }
+
+        if ($level > 1 && $this->at($depth, $level - 1)->isInTransit()) {
+            return 'Containeren nedenunder er i transit og er ikke meldt sat i buffer endnu.';
         }
 
         return null;
@@ -211,6 +230,8 @@ final class RowGrid
             return $this->row->capacity();
         }
 
-        return ($front - 1) * $this->row->height + ($this->row->height - $this->countInColumn($front));
+        $onTop = $this->transitOnTop($front) ? 0 : $this->row->height - $this->countInColumn($front);
+
+        return ($front - 1) * $this->row->height + $onTop;
     }
 }

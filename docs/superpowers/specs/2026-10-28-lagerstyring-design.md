@@ -32,13 +32,15 @@ Alle pladser beskrives med én byggesten: en række med dybde og højde, der til
 | Område (`zones`) | lager, navn, sortering | Grupperer rækker på skærmen: "Rækker", "Buffer" |
 | Række (`storage_rows`) | område, navn, dybde, højde, sortering | Pladser beregnes som dybde × højde. Ingen pladstabel. `rows` er reserveret i MySQL. |
 | Kunde (`customers`) | kundenummer (unikt), navn | |
-| Container (`containers`) | nummer (unikt), navn, kunde (valgfri), status, række, dybde, højde | Status: `stored` / `delivered`. Plads-felterne er null ved `delivered`. Unik indeks på (række, dybde, højde). |
+| Container (`containers`) | nummer (unikt), navn, kunde (valgfri), status, række, dybde, højde | Status: `stored` / `delivered` / `pending` / `transit`. Plads-felterne er null ved `delivered` og `pending`. Ved `transit` holder de den reserverede bufferplads på det andet lager. Unik indeks på (række, dybde, højde). |
 | Bruger (`operators`) | navn, aktiv | Tablet-brugere uden kodeord. Hedder `operators` for ikke at kollidere med Laravels `users`. |
 | Admin (`users`) | navn, e-mail, adgangskode | Laravels standardbrugere. Kun til opsætning. |
-| Logpost (`activity_log`) | bruger, handling, container, fra-plads, til-plads, fra-kunde, til-kunde, fra-navn, til-navn, fortrudt-af, tidspunkt | Handling: `created`, `placed`, `moved`, `delivered`, `returned`, `edited`, `undone`. Fortrudte poster slettes ikke; de får `undone_by` sat til den post, der rullede tilbage. |
+| Logpost (`activity_log`) | bruger, handling, container, fra-plads, til-plads, fra-kunde, til-kunde, fra-navn, til-navn, fortrudt-af, tidspunkt | Handling: `created`, `placed`, `moved`, `delivered`, `returned`, `edited`, `transferred`, `arrived`, `undone`. Fortrudte poster slettes ikke; de får `undone_by` sat til den post, der rullede tilbage. |
 | Indstillinger (`settings`) | nøgle, værdi | `minutes_per_move` (standard 4) |
 
 Pladskoordinater: dybde 1 er forrest (ved indgangen), højde 1 er nederst.
+
+Pladsnavne (tilføjet efter første test): række, plads og højde med mellemrum, så man kan tælle sig frem. "Lager 1 · A 3 2" er række A, plads 3 fra indgangen, højde 2 nedefra. Rækker med kun én plads (bufferstakke) har ikke pladstallet med: "Lager 1 · Buffer 2 1" er stak 2, højde 1. Tavlen viser pladstal under kolonnerne og højdetal i venstre side.
 
 ## 4. Regler
 
@@ -67,8 +69,18 @@ Sættes en container i en kolonne, mens en kolonne med højere dybde i samme ræ
 
 Samme klasse udfører udlevering (`canTake`, status → `delivered`, plads nulstilles), hjemkomst (`canPlace`, status → `stored`, kunde kan skiftes) og første placering af en ny container.
 
+### 4.4a Flytning mellem lagre via transit (`TransferPlanner`, `MoveService::transfer` og `arrive`)
+Tilføjet efter første test, for at undgå fejl når en container skal over på det andet lager.
+1. I panelet for en container, der kan tages, står en knap pr. andet lager: "Flyt til Lager 2". Under knappen står den bufferplads, den får.
+2. Systemet vælger bufferpladsen: den lovlige plads i lagerets bufferområder, der spærrer færrest tomme pladser inde og står lavest, ved lighed den første i opsætningens rækkefølge.
+3. Efter bekræftelse får containeren status `transit`. Den gamle plads bliver fri, og bufferpladsen er reserveret. Logposten hedder `transferred`.
+4. Når containeren er sat ned, trykker chaufføren "Sat i buffer" i panelet eller i listen "I transit". Efter bekræftelse er status `stored` på samme plads, og logposten hedder `arrived`.
+
+Regler: knappen virker kun, når containeren kan tages. Er bufferen fuld, eller har lageret ingen buffer, kan knappen ikke bruges, og grunden står under den. En container i transit kan ikke tages, trækkes, vælges eller udleveres, og intet kan sættes oven på den. Den tæller som optaget plads overalt, også ved ændring af layout og sletning. Den gamle måde, hvor man vælger containeren, skifter lager og trykker på en grøn plads, findes stadig til flytning direkte ind i en række.
+
 ### 4.5 Fortryd (`UndoService`)
-- Fortrydbare handlinger: `placed`, `moved`, `delivered`, `returned`, `edited`.
+- Fortrydbare handlinger: `placed`, `moved`, `delivered`, `returned`, `edited`, `transferred`, `arrived`.
+- Fortryd af `transferred` sætter containeren tilbage på den gamle plads, hvis reglerne tillader det, og frigiver reservationen. Fortryd af `arrived` sætter den tilbage i transit, hvis intet er sat oven på den.
 - De 15 nyeste ikke-fortrudte poster er "fortrydbare", men kun den nyeste af dem kan fortrydes ad gangen (stak). Når den er fortrudt, bliver den næste nyeste tilgængelig.
 - Fortryd af `placed`, `moved`, `delivered` og `returned` udføres som en almindelig flytning via `MoveService` med alle regler slået til. Kan det ikke lade sig gøre (kildepladsen er optaget eller spærret), afvises det med forklaring, og intet ændres. Fortryd af `edited` gendanner navn og kunde fra logposten.
 - En fortrydelse skriver en ny logpost af typen `undone` og sætter `undone_by` på originalen.
@@ -162,4 +174,4 @@ Livewire-komponenterne testes let (siden renderer, flytning via komponent skrive
 
 ## 12. Bevidst udeladt (kan komme senere)
 
-Containerstørrelser, arbejdslister/planlagte flytninger, pladsreservationer, flere kunder pr. container, roller ud over admin, offline-tilstand, websockets, ægte 3D, eksport/rapporter, notifikationer.
+Containerstørrelser, arbejdslister/planlagte flytninger, pladsreservationer ud over transit, flere kunder pr. container, roller ud over admin, offline-tilstand, websockets, ægte 3D, eksport/rapporter, notifikationer.

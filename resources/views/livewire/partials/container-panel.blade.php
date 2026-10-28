@@ -19,10 +19,20 @@
         </div>
 
         <div class="space-y-4 px-4 pb-6">
-            <div class="rounded-xl bg-slate-50 p-3">
-                <div class="text-sm text-slate-500">Placering</div>
-                <div class="text-lg font-semibold">{{ $panel['location'] }}</div>
-            </div>
+            @if ($c->isInTransit())
+                <div class="rounded-xl bg-sky-50 p-4 ring-1 ring-sky-200">
+                    <div class="text-sm font-semibold uppercase tracking-wide text-sky-700">I transit</div>
+                    <p class="mt-1 text-lg">Skal sættes på</p>
+                    <p class="text-2xl font-bold text-sky-900">{{ \App\Services\LocationLabel::place($c->location()) }}</p>
+                    <p class="mt-2 text-slate-700">Pladsen er reserveret. Tryk på knappen, når containeren står der.</p>
+                    <button type="button" wire:click="prepareArrive({{ $c->id }})" class="btn-primary mt-3 h-14 w-full text-lg">Sat i buffer</button>
+                </div>
+            @else
+                <div class="rounded-xl bg-slate-50 p-3">
+                    <div class="text-sm text-slate-500">Placering</div>
+                    <div class="text-lg font-semibold">{{ $panel['location'] }}</div>
+                </div>
+            @endif
 
             @if ($access)
                 <div @class(['rounded-xl p-3', 'bg-emerald-50' => $access['moves'] === 0, 'bg-amber-50' => $access['moves'] > 0])>
@@ -54,16 +64,34 @@
                 </div>
             @endif
 
-            <div class="grid grid-cols-2 gap-2">
-                @if (! $c->isStored() || $panel['takeReason'] === null)
-                    <button type="button" wire:click="pick({{ $c->id }})" class="btn-primary h-14 text-lg">
-                        {{ $c->isStored() ? 'Flyt' : 'Sæt på plads' }}
-                    </button>
-                @endif
-                @if ($c->isStored() && $panel['takeReason'] === null)
-                    <button type="button" wire:click="prepare({{ $c->id }}, @js($c->slot()->key()), 'deliver')" class="btn-secondary h-14 text-lg">Udlevér</button>
-                @endif
-            </div>
+            @unless ($c->isInTransit())
+                <div class="grid grid-cols-2 gap-2">
+                    @if (! $c->isStored() || $panel['takeReason'] === null)
+                        <button type="button" wire:click="pick({{ $c->id }})" class="btn-primary h-14 text-lg">
+                            {{ $c->isStored() ? 'Flyt' : 'Sæt på plads' }}
+                        </button>
+                    @endif
+                    @if ($c->isStored() && $panel['takeReason'] === null)
+                        <button type="button" wire:click="prepare({{ $c->id }}, @js($c->slot()->key()), 'deliver')" class="btn-secondary h-14 text-lg">Udlevér</button>
+                    @endif
+                </div>
+            @endunless
+
+            @if ($c->isStored() && $panel['takeReason'] === null)
+                @foreach ($panel['transfers'] as $t)
+                    <div>
+                        <button type="button" @disabled($t['slot'] === null)
+                                @if ($t['slot']) wire:click="prepareTransfer({{ $c->id }}, @js($c->slot()->key()), {{ $t['warehouse']->id }})" @endif
+                                class="btn-secondary flex h-14 w-full items-center justify-center gap-2 text-lg disabled:opacity-50">
+                            <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 12h14m-5-5l5 5-5 5"/></svg>
+                            Flyt til {{ $t['warehouse']->name }}
+                        </button>
+                        <p class="mt-1 text-sm {{ $t['slot'] ? 'text-slate-600' : 'text-red-700' }}">
+                            {{ $t['slot'] ? 'Får bufferplads '.$t['label'].'.' : $t['reason'] }}
+                        </p>
+                    </div>
+                @endforeach
+            @endif
 
             <form wire:submit="savePanel" class="space-y-3 rounded-xl ring-1 ring-slate-200 p-3">
                 <div class="text-sm font-semibold uppercase tracking-wide text-slate-500">Ret oplysninger</div>

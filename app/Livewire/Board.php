@@ -13,6 +13,7 @@ use App\Services\MoveRejected;
 use App\Services\MoveService;
 use App\Services\PlacementRules;
 use App\Services\RowGrid;
+use App\Services\TransferPlanner;
 use App\Support\BoardVersion;
 use App\Support\Slot;
 use InvalidArgumentException;
@@ -79,7 +80,7 @@ class Board extends Component
             return;
         }
 
-        if ($container->isStored() && ($reason = app(PlacementRules::class)->whyCannotTake($container))) {
+        if ($container->occupiesSlot() && ($reason = app(PlacementRules::class)->whyCannotTake($container))) {
             $this->flash($reason, 'error');
 
             return;
@@ -107,6 +108,13 @@ class Board extends Component
 
         if ($container === null) {
             $this->flash('Containeren findes ikke længere.', 'error');
+            $this->picked = null;
+
+            return;
+        }
+
+        if ($container->isInTransit()) {
+            $this->flash($rules->whyCannotTake($container), 'error');
             $this->picked = null;
 
             return;
@@ -168,6 +176,76 @@ class Board extends Component
             'warnings' => $warnings,
         ];
         $this->returnCustomerId = $container->customer_id;
+    }
+
+    /** Forbered "Flyt til Lager 2": systemet vælger bufferpladsen, og bekræftelsen viser den. */
+    public function prepareTransfer(int $containerId, ?string $fromKey, int $warehouseId): void
+    {
+        $container = Container::query()->with('customer')->find($containerId);
+        $warehouse = Warehouse::query()->find($warehouseId);
+
+        if ($container === null || $warehouse === null) {
+            $this->flash('Containeren eller lageret findes ikke længere.', 'error');
+
+            return;
+        }
+
+        if (! $container->isStored() || $fromKey !== $container->slot()?->key()) {
+            $this->flash(MoveRejected::boardChanged()->getMessage(), 'error');
+
+            return;
+        }
+
+        $plan = app(TransferPlanner::class)->plan($container, $warehouse);
+
+        if ($plan['slot'] === null) {
+            $this->flash($plan['reason'], 'error');
+
+            return;
+        }
+
+        $this->panelId = null;
+        $this->picked = null;
+        $this->confirm = [
+            'type' => 'transfer',
+            'id' => $container->id,
+            'number' => $container->number,
+            'name' => $container->name,
+            'customer' => $container->customer?->name,
+            'from' => $container->slot()->key(),
+            'fromLabel' => LocationLabel::forContainer($container),
+            'target' => $plan['slot']->key(),
+            'toLabel' => $plan['label'],
+            'warehouse' => $warehouse->name,
+            'warnings' => [],
+        ];
+    }
+
+    /** Forbered "Sat i buffer" for en container i transit. */
+    public function prepareArrive(int $containerId): void
+    {
+        $container = Container::query()->with('customer')->find($containerId);
+
+        if ($container === null || ! $container->isInTransit()) {
+            $this->flash(MoveRejected::boardChanged()->getMessage(), 'error');
+
+            return;
+        }
+
+        $this->panelId = null;
+        $this->picked = null;
+        $this->confirm = [
+            'type' => 'arrive',
+            'id' => $container->id,
+            'number' => $container->number,
+            'name' => $container->name,
+            'customer' => $container->customer?->name,
+            'from' => $container->location()->key(),
+            'fromLabel' => Container::STATUS_LABELS[Container::TRANSIT],
+            'target' => $container->location()->key(),
+            'toLabel' => LocationLabel::place($container->location()),
+            'warnings' => [],
+        ];
     }
 
     /**
@@ -241,10 +319,13 @@ class Board extends Component
                 'deliver' => $moves->deliver($container, $from ?? throw MoveRejected::boardChanged(), $actor),
                 'return' => $moves->returnHome($container, Slot::fromKey($c['target']), $this->validCustomerId($this->returnCustomerId), $actor),
                 'place' => $moves->place($container, Slot::fromKey($c['target']), $actor),
+                'transfer' => $moves->transfer($container, $from ?? throw MoveRejected::boardChanged(), Slot::fromKey($c['target']), $actor),
+                'arrive' => $moves->arrive($container, Slot::fromKey($c['target']), $actor),
             };
 
             $this->flash(match ($c['type']) {
                 'deliver' => "Container {$c['number']} er udleveret.",
+                'transfer' => "Container {$c['number']} er i transit til {$c['toLabel']}. Tryk “Sat i buffer”, når den står der.",
                 default => "Container {$c['number']} står nu på {$c['toLabel']}.",
             });
         } catch (MoveRejected $e) {
@@ -260,7 +341,7 @@ class Board extends Component
             return;
         }
 
-        if ($container->isStored()) {
+        if ($container->occupiesSlot()) {
             $this->warehouseId = $container->row->zone->warehouse_id;
         }
 
@@ -303,7 +384,7 @@ class Board extends Component
 
         $stored = Container::query()
             ->with('customer')
-            ->where('status', Container::STORED)
+            ->whereIn('status', Container::ON_SLOT)
             ->whereIn('storage_row_id', $rows->pluck('id'))
             ->get()
             ->groupBy('storage_row_id');
@@ -352,6 +433,7 @@ class Board extends Component
             'matches' => $matches,
             'results' => $results,
             'pendingList' => $listQuery(Container::PENDING)->get(),
+            'transitList' => Container::query()->with('customer')->where('status', Container::TRANSIT)->orderBy('updated_at')->get(),
             'deliveredList' => $listQuery(Container::DELIVERED)->limit(300)->get(),
             'deliveredCount' => Container::query()->where('status', Container::DELIVERED)->count(),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'number']),
@@ -368,7 +450,7 @@ class Board extends Component
 
         $picked = Container::query()->with('customer')->find($this->picked);
 
-        if ($picked === null || ($picked->isStored() && ! app(PlacementRules::class)->canTake($picked))) {
+        if ($picked === null || ($picked->occupiesSlot() && ! app(PlacementRules::class)->canTake($picked))) {
             $this->picked = null;
 
             return null;
@@ -397,6 +479,7 @@ class Board extends Component
             'location' => LocationLabel::forContainer($container),
             'access' => app(AccessCalculator::class)->for($container),
             'takeReason' => $container->isStored() ? app(PlacementRules::class)->whyCannotTake($container) : null,
+            'transfers' => $container->isStored() ? app(TransferPlanner::class)->options($container) : collect(),
             'history' => $container->activities()->with('operator', 'user')->limit(8)->get(),
         ];
     }

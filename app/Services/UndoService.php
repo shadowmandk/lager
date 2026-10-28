@@ -114,6 +114,25 @@ final class UndoService
             case Activity::EDITED:
                 return $this->moves->apply($container, Activity::UNDONE, $actor,
                     customerId: $a->from_customer_id, name: $a->from_name, undoesId: $a->id);
+
+            case Activity::TRANSFERRED:
+                // Containeren er aldrig kørt: den kommer tilbage på sin gamle plads, og reservationen frigives.
+                if (! $container->isInTransit() || ! $to?->equals($container->location())) {
+                    throw new MoveRejected('Containeren er ikke længere i transit.');
+                }
+                $this->assertFromSlotExists($from);
+                $this->moves->assertCanPlace($from, $container->id);
+
+                return $this->moves->apply($container, Activity::UNDONE, $actor,
+                    status: Container::STORED, slot: $from, undoesId: $a->id);
+
+            case Activity::ARRIVED:
+                // Tilbage til transit. Det kræver, at intet er sat oven på eller foran den imens.
+                $this->assertStandsAt($container, $to);
+                $this->moves->assertCanTake($container);
+
+                return $this->moves->apply($container, Activity::UNDONE, $actor,
+                    status: Container::TRANSIT, undoesId: $a->id);
         }
 
         throw new MoveRejected('Denne handling kan ikke fortrydes.');

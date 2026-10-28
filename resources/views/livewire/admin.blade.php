@@ -167,7 +167,7 @@
                                 <td>{{ $c->customer?->name }}</td>
                                 <td class="text-sm">{{ \App\Services\LocationLabel::forContainer($c) }}</td>
                                 <td class="text-right">
-                                    @unless ($c->isStored())
+                                    @unless ($c->occupiesSlot())
                                         <button type="button" wire:click="deleteContainer({{ $c->id }})"
                                                 wire:confirm="Fjern container {{ $c->number }} fra systemet? Historikken bevares i loggen." class="btn-danger h-9 text-sm">Fjern</button>
                                     @endunless

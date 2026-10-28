@@ -26,12 +26,21 @@ class StorageRow extends Model
 
     public function containers(): HasMany
     {
-        return $this->hasMany(Container::class)->where('status', Container::STORED);
+        return $this->hasMany(Container::class)->whereIn('status', Container::ON_SLOT);
     }
 
     public function capacity(): int
     {
         return $this->depth * $this->height;
+    }
+
+    /**
+     * Pladsens navn: række, plads talt fra indgangen, højde talt nedefra. "A 3 2".
+     * Rækker med kun én plads (bufferstakke) har ikke pladstallet med: "Buffer 2 1".
+     */
+    public function slotName(int $depth, int $level): string
+    {
+        return $this->depth === 1 ? "{$this->name} {$level}" : "{$this->name} {$depth} {$level}";
     }
 
     /** "Lager 1 · A" */

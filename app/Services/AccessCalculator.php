@@ -41,7 +41,7 @@ final class AccessCalculator
             ->get();
 
         $stored = Container::query()
-            ->where('status', Container::STORED)
+            ->whereIn('status', Container::ON_SLOT)
             ->whereIn('storage_row_id', $otherRows->pluck('id'))
             ->get()
             ->groupBy('storage_row_id');

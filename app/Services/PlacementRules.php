@@ -20,6 +20,10 @@ final class PlacementRules
 
     public function whyCannotTake(Container $container): ?string
     {
+        if ($container->isInTransit()) {
+            return 'Containeren er i transit. Meld den sat i buffer, når den står der.';
+        }
+
         if (! $container->isStored()) {
             return 'Containeren står ikke på lager.';
         }

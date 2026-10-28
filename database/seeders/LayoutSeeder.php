@@ -7,7 +7,8 @@ use Illuminate\Database\Seeder;
 
 /**
  * Startlayoutet: Lager 1 med 3 rækker (10 dyb, 3 høj) og buffer (4 stakke, 3 høj),
- * Lager 2 med 3 rækker (6 dyb, 3 høj). Kan rettes under opsætning bagefter.
+ * Lager 2 med 3 rækker (6 dyb, 3 høj) og buffer (4 stakke, 3 høj). Kan rettes under opsætning bagefter.
+ * Bufferen bruges også, når en container flyttes mellem lagrene.
  */
 class LayoutSeeder extends Seeder
 {
@@ -34,6 +35,11 @@ class LayoutSeeder extends Seeder
         $rows2 = $lager2->zones()->create(['name' => 'Rækker', 'sort' => 1]);
         foreach (['A', 'B', 'C'] as $i => $name) {
             $rows2->rows()->create(['name' => $name, 'depth' => 6, 'height' => 3, 'sort' => $i + 1]);
+        }
+
+        $buffer2 = $lager2->zones()->create(['name' => 'Buffer', 'is_buffer' => true, 'sort' => 2]);
+        foreach (range(1, 4) as $i) {
+            $buffer2->rows()->create(['name' => "Buffer {$i}", 'depth' => 1, 'height' => 3, 'sort' => $i]);
         }
     }
 }

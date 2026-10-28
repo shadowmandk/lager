@@ -21,8 +21,14 @@ class Activity extends Model
 
     public const UNDONE = 'undone';
 
+    /** Sendt i transit til bufferen på et andet lager. */
+    public const TRANSFERRED = 'transferred';
+
+    /** Meldt sat i buffer efter transit. */
+    public const ARRIVED = 'arrived';
+
     /** Handlinger, der kan fortrydes. */
-    public const UNDOABLE = [self::PLACED, self::MOVED, self::DELIVERED, self::RETURNED, self::EDITED];
+    public const UNDOABLE = [self::PLACED, self::MOVED, self::DELIVERED, self::RETURNED, self::EDITED, self::TRANSFERRED, self::ARRIVED];
 
     public const LABELS = [
         self::CREATED => 'Oprettet',
@@ -32,6 +38,8 @@ class Activity extends Model
         self::RETURNED => 'Hjemkommet',
         self::EDITED => 'Rettet',
         self::UNDONE => 'Fortrudt',
+        self::TRANSFERRED => 'Sendt til andet lager',
+        self::ARRIVED => 'Sat i buffer',
     ];
 
     public const UPDATED_AT = null;

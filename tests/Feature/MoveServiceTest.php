@@ -20,8 +20,8 @@ it('moves a takeable container to a legal slot and logs it', function () {
 
     expect($c->fresh()->slot()->key())->toBe(slot($this->b, 10, 1)->key())
         ->and($log->action)->toBe(Activity::MOVED)
-        ->and($log->from_label)->toBe('Lager 1 · A · dybde 10, højde 1')
-        ->and($log->to_label)->toBe('Lager 1 · B · dybde 10, højde 1')
+        ->and($log->from_label)->toBe('Lager 1 · A 10 1')
+        ->and($log->to_label)->toBe('Lager 1 · B 10 1')
         ->and($log->operator_id)->not->toBeNull();
 });
 

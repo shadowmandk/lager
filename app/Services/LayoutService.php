@@ -18,7 +18,7 @@ final class LayoutService
         $this->assertSize($depth, $height);
 
         $outside = Container::query()
-            ->where('status', Container::STORED)
+            ->whereIn('status', Container::ON_SLOT)
             ->where('storage_row_id', $row->id)
             ->where(fn ($q) => $q->where('depth', '>', $depth)->orWhere('level', '>', $height))
             ->pluck('number');
@@ -77,7 +77,7 @@ final class LayoutService
 
     private function storedIn(array $rowIds): int
     {
-        return Container::query()->where('status', Container::STORED)->whereIn('storage_row_id', $rowIds)->count();
+        return Container::query()->whereIn('status', Container::ON_SLOT)->whereIn('storage_row_id', $rowIds)->count();
     }
 
     private function assertSize(int $depth, int $height): void

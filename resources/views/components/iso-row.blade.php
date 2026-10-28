@@ -10,7 +10,7 @@
     // Geometri i SVG-enheder. Forsiden er containerens lange side; toppen og enden ses skråt bagud til højre.
     $W = 84; $H = 44; $DX = 12; $DY = 9; $GAP = 6;
     $STEP = $W + $DX + $GAP;
-    $ML = $row->depth > 1 ? 58 : 6;
+    $ML = $row->depth > 1 ? 66 : 18;
     $MT = $DY + 4;
     $vbW = $ML + $row->depth * $STEP - $GAP + 2;
     $vbH = $MT + $row->height * $H + 20;
@@ -39,11 +39,15 @@
 
     <line x1="{{ $ML - 4 }}" y1="{{ $floor + 1 }}" x2="{{ $vbW - 2 }}" y2="{{ $floor + 1 }}" stroke="#94a3b8" stroke-width="2"/>
 
+    {{-- Pladstal under kolonnerne (talt fra indgangen) og højdetal i venstre side (talt nedefra) --}}
     @if ($row->depth > 1)
         @for ($d = 1; $d <= $row->depth; $d++)
-            <text x="{{ $ML + ($d - 1) * $STEP + $W / 2 }}" y="{{ $floor + 16 }}" text-anchor="middle" class="iso-small">{{ $d }}</text>
+            <text x="{{ $ML + ($d - 1) * $STEP + $W / 2 }}" y="{{ $floor + 16 }}" text-anchor="middle" class="iso-axis">{{ $d }}</text>
         @endfor
     @endif
+    @for ($l = 1; $l <= $row->height; $l++)
+        <text x="{{ $ML - 6 }}" y="{{ $MT + ($row->height - $l) * $H + $H / 2 + 4 }}" text-anchor="end" class="iso-axis">{{ $l }}</text>
+    @endfor
 
     @for ($d = 1; $d <= $row->depth; $d++)
         @for ($l = 1; $l <= $row->height; $l++)
@@ -62,15 +66,16 @@
                     $isDim = $matches !== null && ! $isMatch;
                     $isPicked = $picked?->id === $c->id;
                     $customer = $c->customer ? \Illuminate\Support\Str::limit($c->customer->name, 13, '…') : 'Ingen kunde';
+                    $inTransit = $c->isInTransit();
                 @endphp
-                <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked])
+                <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked, 'ctr-transit' => $inTransit])
                    data-container-id="{{ $c->id }}" data-col="{{ $row->id }}:{{ $d }}"
                    @if ($isTake)
                        data-drag-id="{{ $c->id }}" data-drag-kind="stored" data-from="{{ $key }}"
                        data-drag-number="{{ $c->number }}" data-drag-label="{{ $customer }}" data-drag-color="{{ $col['side'] }}"
                    @endif
                    wire:click="openPanel({{ $c->id }})">
-                    <title>{{ $c->number }} · {{ $c->name }} · {{ $c->customer?->name ?? 'Ingen kunde' }}</title>
+                    <title>{{ $row->slotName($d, $l) }} · {{ $c->number }} · {{ $c->name }} · {{ $c->customer?->name ?? 'Ingen kunde' }}{{ $inTransit ? ' · i transit' : '' }}</title>
                     {{-- top --}}
                     <polygon points="{{ $x }},{{ $y }} {{ $x + $DX }},{{ $y - $DY }} {{ $x + $W + $DX }},{{ $y - $DY }} {{ $x + $W }},{{ $y }}"
                              fill="{{ $col['top'] }}" stroke="{{ $col['stroke'] }}" stroke-width="0.8"/>
@@ -93,7 +98,11 @@
                     {{-- læseplade --}}
                     <rect x="{{ $x + 7 }}" y="{{ $y + 7 }}" width="{{ $W - 14 }}" height="{{ $H - 14 }}" rx="3" fill="#ffffff" opacity="0.88"/>
                     <text x="{{ $x + $W / 2 }}" y="{{ $y + 21 }}" text-anchor="middle" class="iso-num" fill="{{ $col['text'] }}">{{ $c->number }}</text>
-                    <text x="{{ $x + $W / 2 }}" y="{{ $y + 32 }}" text-anchor="middle" class="iso-cust" fill="{{ $col['text'] }}">{{ $customer }}</text>
+                    <text x="{{ $x + $W / 2 }}" y="{{ $y + 32 }}" text-anchor="middle" class="iso-cust" fill="{{ $col['text'] }}">{{ $inTransit ? 'PÅ VEJ' : $customer }}</text>
+
+                    @if ($inTransit)
+                        <rect x="{{ $x - 1.5 }}" y="{{ $y - 1.5 }}" width="{{ $W + 3 }}" height="{{ $H + 3 }}" rx="3" class="transit-ring"/>
+                    @endif
 
                     @if ($isMatch)
                         <rect x="{{ $x - 2 }}" y="{{ $y - 2 }}" width="{{ $W + 4 }}" height="{{ $H + 4 }}" rx="3" class="match-ring"/>
@@ -109,7 +118,7 @@
                       x="{{ $x + 1 }}" y="{{ $y + 1 }}" width="{{ $W - 2 }}" height="{{ $H - 2 }}" rx="4"
                       pointer-events="all"
                       @if ($isPickTarget) wire:click="prepare({{ $picked->id }}, @js($pickedFrom), '{{ $key }}')" @endif>
-                    <title>Ledig plads · dybde {{ $d }}, højde {{ $l }}</title>
+                    <title>Ledig plads · {{ $row->slotName($d, $l) }}</title>
                 </rect>
             @endif
         @endfor

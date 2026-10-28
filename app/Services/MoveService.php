@@ -87,6 +87,45 @@ final class MoveService
         });
     }
 
+    /**
+     * Send en container til bufferen på et andet lager. Den forlader sin plads og står i transit
+     * med den reserverede bufferplads, til den meldes sat i buffer.
+     */
+    public function transfer(Container $container, Slot $expected, Slot $reserved, Actor $actor): Activity
+    {
+        return $this->transaction(function () use ($container, $expected, $reserved, $actor) {
+            $container = $this->fresh($container);
+
+            if (! $container->isStored() || ! $expected->equals($container->slot())) {
+                throw MoveRejected::boardChanged();
+            }
+
+            $this->assertCanTake($container);
+
+            if (! app(TransferPlanner::class)->isBufferElsewhere($container, $reserved)) {
+                throw new MoveRejected('Containeren kan kun sendes til bufferen på et andet lager.');
+            }
+
+            $this->assertCanPlace($reserved, $container->id);
+
+            return $this->apply($container, Activity::TRANSFERRED, $actor, status: Container::TRANSIT, slot: $reserved);
+        });
+    }
+
+    /** En container i transit er sat ned på sin reserverede bufferplads. */
+    public function arrive(Container $container, Slot $expected, Actor $actor): Activity
+    {
+        return $this->transaction(function () use ($container, $expected, $actor) {
+            $container = $this->fresh($container);
+
+            if (! $container->isInTransit() || ! $expected->equals($container->location())) {
+                throw MoveRejected::boardChanged();
+            }
+
+            return $this->apply($container, Activity::ARRIVED, $actor, status: Container::STORED);
+        });
+    }
+
     /** Ret navn og kunde. */
     public function edit(Container $container, ?string $name, ?int $customerId, Actor $actor): ?Activity
     {
@@ -228,7 +267,7 @@ final class MoveService
     {
         return [
             'status' => $container->status,
-            'slot' => $container->slot(),
+            'slot' => $container->location(),
             'customer_id' => $container->customer_id,
             'name' => $container->name,
         ];

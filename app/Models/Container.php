@@ -23,10 +23,17 @@ class Container extends Model
     /** Oprettet, men endnu ikke placeret. */
     public const PENDING = 'pending';
 
+    /** På vej til det andet lager. Bufferpladsen, den skal stå på, er reserveret i placeringsfelterne. */
+    public const TRANSIT = 'transit';
+
+    /** Statusser, hvor containeren optager en plads (stående eller reserveret). */
+    public const ON_SLOT = [self::STORED, self::TRANSIT];
+
     public const STATUS_LABELS = [
         self::STORED => 'På lager',
         self::DELIVERED => 'Udleveret til kunde',
         self::PENDING => 'Venter på plads',
+        self::TRANSIT => 'I transit',
     ];
 
     protected $fillable = ['number', 'name', 'customer_id', 'status', 'storage_row_id', 'depth', 'level'];
@@ -61,9 +68,30 @@ class Container extends Model
         return $this->status === self::STORED;
     }
 
+    public function isInTransit(): bool
+    {
+        return $this->status === self::TRANSIT;
+    }
+
+    public function occupiesSlot(): bool
+    {
+        return in_array($this->status, self::ON_SLOT, true);
+    }
+
+    /** Pladsen, containeren står på. Kun for containere på lager. */
     public function slot(): ?Slot
     {
         if (! $this->isStored()) {
+            return null;
+        }
+
+        return new Slot($this->storage_row_id, $this->depth, $this->level);
+    }
+
+    /** Pladsen, containeren står på eller har reserveret, hvis den er i transit. */
+    public function location(): ?Slot
+    {
+        if (! $this->occupiesSlot()) {
             return null;
         }
 

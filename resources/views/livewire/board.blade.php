@@ -120,6 +120,25 @@
                 Udlevér til kunde
             </div>
 
+            @if ($transitList->isNotEmpty())
+                <section class="rounded-2xl bg-sky-50 p-3 shadow-sm ring-1 ring-sky-200">
+                    <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-800">I transit ({{ $transitList->count() }})</h2>
+                    <div class="space-y-2">
+                        @foreach ($transitList as $c)
+                            <div wire:key="transit-{{ $c->id }}" class="overflow-hidden rounded-lg bg-white ring-1 ring-sky-200">
+                                <button type="button" wire:click="openPanel({{ $c->id }})" class="block w-full px-3 py-2 text-left active:bg-slate-50">
+                                    <span class="block truncate font-semibold">{{ $c->number }} <span class="font-normal text-slate-600">{{ $c->customer?->name ?? 'Ingen kunde' }}</span></span>
+                                    <span class="block truncate text-sm text-sky-800">Til {{ \App\Services\LocationLabel::place($c->location()) }}</span>
+                                </button>
+                                <button type="button" wire:click="prepareArrive({{ $c->id }})" class="h-11 w-full border-t border-sky-100 bg-sky-600 font-semibold text-white active:bg-sky-700">
+                                    Sat i buffer
+                                </button>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
             <section class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
                 <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Venter på plads ({{ $pendingList->count() }})</h2>
                 <div class="space-y-2">
@@ -176,6 +195,8 @@
                         @case('deliver') Udlevér container? @break
                         @case('return') Container kommer hjem @break
                         @case('place') Placér ny container @break
+                        @case('transfer') Flyt til {{ $confirm['warehouse'] }}? @break
+                        @case('arrive') Sat i buffer? @break
                         @default Flyt container?
                     @endswitch
                 </h2>
@@ -189,6 +210,16 @@
                     <dt class="text-slate-500">Fra</dt><dd class="font-medium">{{ $confirm['fromLabel'] }}</dd>
                     <dt class="text-slate-500">Til</dt><dd class="font-semibold text-emerald-700">{{ $confirm['toLabel'] }}</dd>
                 </dl>
+
+                @if ($confirm['type'] === 'transfer')
+                    <p class="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sky-900">
+                        Containeren står i transit, til du trykker “Sat i buffer”. Bufferpladsen er reserveret imens, og den gamle plads bliver fri med det samme.
+                    </p>
+                @elseif ($confirm['type'] === 'arrive')
+                    <p class="mt-4 rounded-lg bg-sky-50 px-4 py-3 text-sky-900">
+                        Bekræft kun, når containeren står på pladsen.
+                    </p>
+                @endif
 
                 @if ($confirm['type'] === 'return')
                     <label class="mt-4 block">

@@ -51,7 +51,7 @@ it('moves a container through prepare and confirm, logged on the chosen operator
         ->tap(fn () => session(['operator_id' => $this->op->id]))
         ->call('prepare', $c->id, slot($this->a, 10, 1)->key(), slot($this->b, 10, 1)->key())
         ->assertSet('confirm.type', 'move')
-        ->assertSee('Lager 1 · B · dybde 10, højde 1')
+        ->assertSee('Lager 1 · B 10 1')
         ->call('confirmMove')
         ->assertSet('confirm', null)
         ->assertSet('noticeType', 'ok');
