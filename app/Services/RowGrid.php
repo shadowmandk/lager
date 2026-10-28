@@ -69,6 +69,34 @@ final class RowGrid
         return $copy;
     }
 
+    /** Samme række med containeren sat på pladsen. Bruges, når en plan regnes igennem trin for trin. */
+    public function with(Container $container, int $depth, int $level): self
+    {
+        $copy = clone $this;
+        $copy->cells[$depth][$level] = $container;
+
+        return $copy;
+    }
+
+    /**
+     * Hvor mange containere får én mere i vejen, hvis der sættes en container på pladsen?
+     * Det er dem nedenunder i samme kolonne og alle i kolonnerne bagved.
+     */
+    public function buriedBy(int $depth, int $level): int
+    {
+        $buried = 0;
+
+        foreach ($this->cells as $d => $column) {
+            foreach (array_keys($column) as $l) {
+                if ($d > $depth || ($d === $depth && $l < $level)) {
+                    $buried++;
+                }
+            }
+        }
+
+        return $buried;
+    }
+
     public function at(int $depth, int $level): ?Container
     {
         return $this->cells[$depth][$level] ?? null;

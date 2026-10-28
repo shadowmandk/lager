@@ -14,6 +14,7 @@ use App\Services\MoveService;
 use App\Services\PlacementRules;
 use App\Services\RowGrid;
 use App\Services\TransferPlanner;
+use App\Services\WorkPlanner;
 use App\Support\BoardVersion;
 use App\Support\Slot;
 use InvalidArgumentException;
@@ -24,6 +25,8 @@ use Livewire\Component;
 #[Title('Tavle')]
 class Board extends Component
 {
+    private const PLAN = 'workplan';
+
     #[Url(as: 'lager')]
     public ?int $warehouseId = null;
 
@@ -55,6 +58,12 @@ class Board extends Component
     public string $noticeType = 'ok';
 
     public int $noticeId = 0;
+
+    /** Planvisningen for arbejdsplanen er åben. */
+    public bool $planOpen = false;
+
+    /** Containeren i planen, hvis andre pladser vises. */
+    public ?int $planEdit = null;
 
     public function mount(): void
     {
@@ -424,8 +433,194 @@ class Board extends Component
         $this->flash($log ? "Container {$container->number} er rettet." : 'Ingen ændringer.');
     }
 
+    /**
+     * Arbejdsplan: forslag til, hvor containerne i vejen skal stå. Planen gemmes i tablettens session
+     * som målcontainer og de pladser, medarbejderen selv har valgt, og regnes forfra ud fra tavlen hver gang.
+     */
+    public function openPlan(int $containerId): void
+    {
+        $container = Container::query()->with('row.zone')->find($containerId);
+
+        if ($container === null || ! $container->isStored()) {
+            $this->flash('Containeren står ikke på lageret.', 'error');
+
+            return;
+        }
+
+        $current = $this->planState();
+
+        if ($current === null || $current['target'] !== $container->id) {
+            $plan = app(WorkPlanner::class)->plan($container);
+
+            if ($plan === null || $plan['blockers'] === 0) {
+                $this->flash("{$container->number} kan tages nu. Der skal ikke flyttes noget først.");
+
+                return;
+            }
+
+            if ($current !== null) {
+                $old = Container::query()->find($current['target']);
+                $this->flash('Den tidligere arbejdsplan'.($old ? " for {$old->number}" : '').' er stoppet.');
+            }
+
+            session([self::PLAN => ['target' => $container->id, 'overrides' => [], 'started' => false, 'total' => $plan['blockers']]]);
+        }
+
+        $this->warehouseId = $container->row->zone->warehouse_id;
+        $this->planOpen = true;
+        $this->planEdit = null;
+        $this->panelId = null;
+        $this->picked = null;
+    }
+
+    public function editStep(int $containerId): void
+    {
+        $this->planEdit = $this->planEdit === $containerId ? null : $containerId;
+    }
+
+    public function chooseStep(int $containerId, string $key): void
+    {
+        $state = $this->planState();
+
+        try {
+            Slot::fromKey($key);
+        } catch (InvalidArgumentException) {
+            return;
+        }
+
+        if ($state === null) {
+            return;
+        }
+
+        $state['overrides'][$containerId] = $key;
+        session([self::PLAN => $state]);
+        $this->planEdit = null;
+    }
+
+    public function resetStep(int $containerId): void
+    {
+        $state = $this->planState();
+
+        if ($state === null) {
+            return;
+        }
+
+        unset($state['overrides'][$containerId]);
+        session([self::PLAN => $state]);
+        $this->planEdit = null;
+    }
+
+    public function startPlan(): void
+    {
+        $state = $this->planState();
+        $plan = $state ? $this->currentPlan($state) : null;
+
+        if ($plan === null) {
+            return;
+        }
+
+        if ($plan['problem'] !== null) {
+            $this->flash($plan['problem'], 'error');
+
+            return;
+        }
+
+        $state['started'] = true;
+        $state['total'] = count($plan['steps']);
+        session([self::PLAN => $state]);
+
+        $this->planOpen = false;
+        $this->planEdit = null;
+        $this->flash('Planen er startet. Følg trinene nederst på skærmen, og tryk “Udført” efter hvert træk.');
+    }
+
+    public function showPlan(?int $editContainerId = null): void
+    {
+        if ($this->planState() !== null) {
+            $this->planOpen = true;
+            $this->planEdit = $editContainerId;
+        }
+    }
+
+    /** Lukker planvisningen. En plan, der ikke er startet, glemmes. */
+    public function closePlan(): void
+    {
+        $state = $this->planState();
+
+        if ($state !== null && ! $state['started']) {
+            session()->forget(self::PLAN);
+        }
+
+        $this->planOpen = false;
+        $this->planEdit = null;
+    }
+
+    public function stopPlan(): void
+    {
+        session()->forget(self::PLAN);
+        $this->planOpen = false;
+        $this->planEdit = null;
+        $this->flash('Arbejdsplanen er stoppet. De flyttede containere står, hvor de blev sat.');
+    }
+
+    /**
+     * Næste trin er udført. Trinet sendes med, så et dobbelttryk eller en ændret tavle ikke flytter
+     * en anden container end den, medarbejderen så på skærmen.
+     */
+    public function stepDone(int $containerId, string $fromKey, string $toKey): void
+    {
+        $state = $this->planState();
+        $plan = $state ? $this->currentPlan($state) : null;
+        $step = $plan['steps'][0] ?? null;
+
+        if ($step === null
+            || $step['container']->id !== $containerId
+            || $step['from']->key() !== $fromKey
+            || $step['to']?->key() !== $toKey) {
+            $this->flash('Planen har ændret sig, siden du trykkede. Se det nye trin, før du trykker igen.', 'error');
+
+            return;
+        }
+
+        try {
+            app(MoveService::class)->move($step['container'], $step['from'], $step['to'], $this->actor());
+        } catch (MoveRejected $e) {
+            $this->flash($e->getMessage(), 'error');
+
+            return;
+        }
+
+        if (count($plan['steps']) === 1) {
+            $this->finishPlan();
+
+            return;
+        }
+
+        $this->flash("{$step['container']->number} står nu på {$step['label']}.");
+    }
+
+    /** Alle containere i vejen er flyttet: planen er slut, og målcontaineren åbnes med de kendte knapper. */
+    public function finishPlan(): void
+    {
+        $state = $this->planState();
+        session()->forget(self::PLAN);
+        $this->planOpen = false;
+        $this->planEdit = null;
+
+        $target = $state ? Container::query()->find($state['target']) : null;
+
+        if ($target === null) {
+            return;
+        }
+
+        $this->openPanel($target->id);
+        $this->flash("Vejen er fri. {$target->number} kan tages nu.");
+    }
+
     public function render()
     {
+        $work = $this->workPlanData();
+
         $warehouses = Warehouse::query()->orderBy('sort')->orderBy('id')->get();
         $warehouse = $warehouses->firstWhere('id', $this->warehouseId) ?? $warehouses->first();
         $this->warehouseId = $warehouse?->id;
@@ -489,8 +684,87 @@ class Board extends Component
             'deliveredCount' => Container::query()->where('status', Container::DELIVERED)->count(),
             'customers' => Customer::query()->orderBy('name')->get(['id', 'name', 'number']),
             'panel' => $this->panelData(),
+            'work' => $work,
+            'planStep' => $work['current'] ?? null,
             'version' => BoardVersion::current(),
         ]);
+    }
+
+    /** @return array{target: int, overrides: array<int, string>, started: bool, total: int}|null */
+    private function planState(): ?array
+    {
+        $state = session(self::PLAN);
+
+        if (! is_array($state) || ! is_int($state['target'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'target' => $state['target'],
+            'overrides' => array_filter((array) ($state['overrides'] ?? []), 'is_string'),
+            'started' => (bool) ($state['started'] ?? false),
+            'total' => (int) ($state['total'] ?? 0),
+        ];
+    }
+
+    /** Planen regnet ud fra tavlen nu. Valg, der ikke længere kan bruges, fjernes med en besked. */
+    private function currentPlan(array $state): ?array
+    {
+        $target = Container::query()->find($state['target']);
+        $plan = $target ? app(WorkPlanner::class)->plan($target, $state['overrides']) : null;
+
+        if ($plan !== null && $plan['dropped'] !== []) {
+            $numbers = Container::query()->whereKey($plan['dropped'])->orderBy('number')->pluck('number')->join(', ', ' og ');
+
+            foreach ($plan['dropped'] as $id) {
+                unset($state['overrides'][$id]);
+            }
+
+            session([self::PLAN => $state]);
+            $this->flash("Pladsen, du valgte til {$numbers}, er ikke ledig længere. Planen foreslår en ny.", 'error');
+        }
+
+        return $plan;
+    }
+
+    /** @return array<string, mixed>|null */
+    private function workPlanData(): ?array
+    {
+        $state = $this->planState();
+
+        if ($state === null) {
+            $this->planOpen = false;
+
+            return null;
+        }
+
+        $target = Container::query()->with('customer', 'row.zone')->find($state['target']);
+        $plan = $this->currentPlan($state);
+
+        if ($target === null || $plan === null) {
+            session()->forget(self::PLAN);
+            $this->planOpen = false;
+            $this->planEdit = null;
+            $this->flash('Arbejdsplanen er stoppet, fordi '.($target?->number ?? 'containeren').' ikke længere står på lageret.', 'error');
+
+            return null;
+        }
+
+        $total = max($state['total'], $plan['blockers']);
+        $done = $total - $plan['blockers'];
+        $first = $plan['steps'][0] ?? null;
+
+        return [
+            'target' => $target,
+            'targetLabel' => $target->row->slotName($target->depth, $target->level),
+            'plan' => $plan,
+            'started' => $state['started'],
+            'done' => $done,
+            'total' => $total,
+            'current' => $state['started'] && $first && $first['to']
+                ? ['id' => $first['container']->id, 'to' => $first['to']->key(), 'n' => $done + 1]
+                : null,
+        ];
     }
 
     private function resolvePicked(): ?Container
@@ -531,6 +805,7 @@ class Board extends Component
             'access' => app(AccessCalculator::class)->for($container),
             'takeReason' => $container->isStored() ? app(PlacementRules::class)->whyCannotTake($container) : null,
             'transfers' => $container->isStored() ? app(TransferPlanner::class)->options($container) : collect(),
+            'planActive' => ($this->planState()['target'] ?? null) === $container->id,
             'history' => $container->activities()->with('operator', 'user')->limit(8)->get(),
         ];
     }

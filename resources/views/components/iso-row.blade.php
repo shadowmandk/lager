@@ -4,6 +4,7 @@
     'matches' => null,
     'pickTargets' => [],
     'picked' => null,
+    'planStep' => null,
 ])
 
 @php
@@ -65,10 +66,11 @@
                     $isMatch = $matches !== null && isset($matches[$c->id]);
                     $isDim = $matches !== null && ! $isMatch;
                     $isPicked = $picked?->id === $c->id;
+                    $isPlan = $planStep !== null && $planStep['id'] === $c->id;
                     $customer = $c->customer ? \Illuminate\Support\Str::limit($c->customer->name, 13, '…') : 'Ingen kunde';
                     $inTransit = $c->isInTransit();
                 @endphp
-                <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked, 'ctr-transit' => $inTransit])
+                <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked, 'ctr-transit' => $inTransit, 'ctr-plan' => $isPlan])
                    data-container-id="{{ $c->id }}" data-col="{{ $row->id }}:{{ $d }}"
                    @if ($isTake)
                        data-drag-id="{{ $c->id }}" data-drag-kind="stored" data-from="{{ $key }}"
@@ -110,16 +112,25 @@
                     @if ($isTake)
                         <rect x="{{ $x + 1.5 }}" y="{{ $y + 1.5 }}" width="{{ $W - 3 }}" height="{{ $H - 3 }}" rx="2" class="take-ring"/>
                     @endif
+                    @if ($isPlan)
+                        <rect x="{{ $x - 3 }}" y="{{ $y - 3 }}" width="{{ $W + 6 }}" height="{{ $H + 6 }}" rx="4" class="plan-ring"/>
+                    @endif
                 </g>
             @else
-                @php $isPickTarget = isset($pickTargets[$key]); @endphp
-                <rect @class(['slot', 'is-target' => $isPickTarget])
+                @php
+                    $isPickTarget = isset($pickTargets[$key]);
+                    $isPlanTo = $planStep !== null && $planStep['to'] === $key;
+                @endphp
+                <rect @class(['slot', 'is-target' => $isPickTarget, 'is-plan' => $isPlanTo])
                       data-slot="{{ $key }}" data-col="{{ $row->id }}:{{ $d }}"
                       x="{{ $x + 1 }}" y="{{ $y + 1 }}" width="{{ $W - 2 }}" height="{{ $H - 2 }}" rx="4"
                       pointer-events="all"
                       @if ($isPickTarget) wire:click="prepare({{ $picked->id }}, @js($pickedFrom), '{{ $key }}')" @endif>
                     <title>Ledig plads · {{ $row->slotName($d, $l) }}</title>
                 </rect>
+                @if ($isPlanTo)
+                    <text x="{{ $x + $W / 2 }}" y="{{ $y + $H / 2 + 5 }}" text-anchor="middle" class="plan-label" pointer-events="none">Trin {{ $planStep['n'] }}</text>
+                @endif
             @endif
         @endfor
     @endfor

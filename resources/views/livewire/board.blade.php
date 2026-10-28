@@ -71,7 +71,7 @@
         </div>
     @endif
 
-    <div class="grid gap-3 p-3 2xl:grid-cols-[minmax(0,1fr)_18rem]">
+    <div @class(['grid gap-3 p-3 2xl:grid-cols-[minmax(0,1fr)_18rem]', 'pb-48' => $work && $work['started']])>
         <main class="space-y-3">
             @forelse ($warehouse?->zones ?? [] as $zone)
                 <section class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200" wire:key="zone-{{ $zone->id }}">
@@ -81,7 +81,7 @@
                         <div class="flex flex-wrap items-end gap-x-8 gap-y-3 pl-12">
                             @foreach ($zone->rows as $row)
                                 <div wire:key="row-{{ $row->id }}" class="flex w-32 flex-col items-center">
-                                    <x-iso-row :row="$row" :grid="$grids[$row->id]" :matches="$matches" :pick-targets="$pickTargets" :picked="$pickedContainer"/>
+                                    <x-iso-row :row="$row" :grid="$grids[$row->id]" :matches="$matches" :pick-targets="$pickTargets" :picked="$pickedContainer" :plan-step="$planStep"/>
                                     <span class="text-sm font-medium text-slate-600">{{ $row->name }}</span>
                                 </div>
                             @endforeach
@@ -95,7 +95,7 @@
                                         <div class="text-xs text-slate-500">{{ $grids[$row->id]->count() }}/{{ $row->capacity() }}</div>
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <x-iso-row :row="$row" :grid="$grids[$row->id]" :matches="$matches" :pick-targets="$pickTargets" :picked="$pickedContainer"/>
+                                        <x-iso-row :row="$row" :grid="$grids[$row->id]" :matches="$matches" :pick-targets="$pickTargets" :picked="$pickedContainer" :plan-step="$planStep"/>
                                     </div>
                                 </div>
                             @endforeach
@@ -293,5 +293,50 @@
     {{-- Container-panel --}}
     @if ($panel)
         @include('livewire.partials.container-panel', ['panel' => $panel, 'customers' => $customers])
+    @endif
+
+    {{-- Arbejdsplan: hele planen --}}
+    @if ($work && $planOpen)
+        @include('livewire.partials.work-plan', ['work' => $work])
+    @endif
+
+    {{-- Arbejdsplan i gang: næste trin nederst på skærmen --}}
+    @if ($work && $work['started'])
+        @php $next = $work['plan']['steps'][0] ?? null; @endphp
+        <div x-show="!dragging" wire:key="plan-bar"
+             class="fixed inset-x-0 bottom-0 z-30 border-t-4 border-violet-600 bg-white px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.15)]">
+            <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+                <div class="min-w-0 flex-1">
+                    <div class="text-sm font-semibold uppercase tracking-wide text-violet-700">
+                        Arbejdsplan for {{ $work['target']->number }}{{ $next ? ' · trin '.($work['done'] + 1).' af '.$work['total'] : '' }}
+                    </div>
+                    @if ($next)
+                        <p class="text-xl leading-snug">
+                            Flyt <strong>{{ $next['container']->number }}</strong> fra <strong>{{ $next['fromLabel'] }}</strong>
+                            til <strong class="text-violet-800">{{ $next['label'] }}</strong>
+                        </p>
+                        @if ($work['plan']['problem'])
+                            <p class="text-red-700">{{ $work['plan']['problem'] }}</p>
+                        @endif
+                    @elseif ($work['plan']['blockers'] === 0)
+                        <p class="text-xl font-semibold text-emerald-800">Vejen er fri. {{ $work['target']->number }} kan tages nu.</p>
+                    @else
+                        <p class="text-lg text-red-700">{{ $work['plan']['problem'] }}</p>
+                    @endif
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    @if ($next)
+                        <button type="button" wire:click="stepDone({{ $next['container']->id }}, @js($next['from']->key()), @js($next['to']->key()))"
+                                wire:loading.attr="disabled" x-bind:disabled="!online"
+                                class="btn-primary h-14 px-8 text-xl disabled:opacity-50">Udført</button>
+                        <button type="button" wire:click="showPlan({{ $next['container']->id }})" class="btn-secondary h-14 text-lg">Skift plads</button>
+                    @elseif ($work['plan']['blockers'] === 0)
+                        <button type="button" wire:click="finishPlan" class="btn-primary h-14 px-6 text-lg">Åbn {{ $work['target']->number }}</button>
+                    @endif
+                    <button type="button" wire:click="showPlan" class="btn-secondary h-14 text-lg">Se planen</button>
+                    <button type="button" wire:click="stopPlan" class="btn-danger h-14 text-lg">Stop</button>
+                </div>
+            </div>
+        </div>
     @endif
 </div>

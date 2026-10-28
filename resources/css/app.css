@@ -84,6 +84,13 @@
 .iso-row .ctr-transit > :not(.transit-ring):not(text) { opacity: 0.35; }
 .iso-row .transit-ring { fill: none; stroke: #0284c7; stroke-width: 2.5; stroke-dasharray: 6 4; }
 
+/* Arbejdsplan: næste container, der skal flyttes, og pladsen den skal hen på (violet, da grøn, gul og blå er brugt) */
+.iso-row .plan-ring { fill: none; stroke: #7c3aed; stroke-width: 4; stroke-dasharray: 8 4; animation: plan-dash 1s linear infinite; }
+.iso-row .slot.is-plan { fill: #ede9fe; fill-opacity: 0.9; stroke: #7c3aed; stroke-width: 3; stroke-dasharray: none; }
+.iso-row .plan-label { font: 700 13px var(--font-sans); fill: #5b21b6; }
+
+@keyframes plan-dash { to { stroke-dashoffset: -12; } }
+
 .iso-row .slot { fill: #f8fafc; fill-opacity: 0.6; stroke: #cbd5e1; stroke-width: 1.2; stroke-dasharray: 4 3; }
 .iso-row .slot.is-target {
     fill: #22c55e; fill-opacity: 0.28; stroke: #16a34a; stroke-width: 2.5; stroke-dasharray: none; cursor: pointer;
@@ -97,7 +104,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .iso-row .slot.is-target { animation: none; }
+    .iso-row .slot.is-target, .iso-row .plan-ring { animation: none; }
 }
 
 /* Statistik. Farverne er de to første faste serier fra diagram-paletten (blå = ind/står, orange = ud). */

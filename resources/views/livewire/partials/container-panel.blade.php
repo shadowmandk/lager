@@ -60,6 +60,9 @@
                                 <strong class="text-red-700">Det er ikke nok til alle {{ $access['moves'] }}.</strong>
                             @endif
                         </p>
+                        <button type="button" wire:click="openPlan({{ $c->id }})" class="btn-primary mt-3 h-14 w-full text-lg">
+                            {{ $panel['planActive'] ? 'Fortsæt arbejdsplan' : 'Lav arbejdsplan' }}
+                        </button>
                     @endif
                 </div>
             @endif

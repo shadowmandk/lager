@@ -98,6 +98,19 @@ For en container på lager:
 
 Beregningen ændrer intet; den er et opslag.
 
+### 5.1 Arbejdsplan (`WorkPlanner`)
+
+Når der skal flyttes containere for at komme ind til en container, kan panelet lave en arbejdsplan: et forslag til, hvor hver container i vejen skal stå. Planen er kun et forslag. Den skal startes, og hvert træk meldes udført.
+
+- **Rækkefølge:** Containerne i vejen tages i samme rækkefølge som i "kom ind til", altså forreste kolonne først og oppefra.
+- **Pladsvalg ("spær for færrest"):** For hver container regnes alle lovlige pladser i lagerets andre rækker og bufferen. Rækken, der graves i, er aldrig et valg. Hver plads får et tal for, hvor mange containere der får én mere i vejen (`RowGrid::buriedBy`). Det er dem nedenunder i samme kolonne og alle i kolonnerne bagved. Ved lighed vælges efter, hvor få tomme pladser der spærres inde (`blockedBehind`). Derefter vælges en række frem for bufferen, en lav plads frem for en høj, opsætningens rækkefølge og til sidst den dybeste plads.
+- **Trin for trin:** Planen regnes igennem med de forrige trin udført (`RowGrid::with` og `without`). En container kommer derfor ikke oven på en, planen lige har flyttet, hvis der findes noget bedre.
+- **Skift plads:** Hvert trin viser de 8 bedste pladser med deres tal. Vælger medarbejderen en anden, planlægges de følgende trin om. Et valg, der ikke længere er lovligt, droppes med en besked.
+- **Kan ikke lade sig gøre:** Er der for få ledige pladser, siger planen, hvor mange der mangler. Står en container i transit i vejen, siges det. I begge tilfælde kan planen ikke startes.
+- **Bagefter:** De flyttede containere bliver stående, hvor planen satte dem. Planen slutter, når målcontaineren kan tages, og så åbner den i panelet med de almindelige knapper.
+
+**Udførelse:** Planen gemmes i enhedens session som målcontaineren og medarbejderens valg. Den regnes forfra ud fra tavlen ved hver visning, så andres flytninger og fortryd slår igennem med det samme. Mens planen kører, viser en bjælke nederst "Trin n af N: Flyt X fra A til B" med knapperne "Udført", "Skift plads", "Se planen" og "Stop". Containeren og målpladsen er fremhævet med violet på tavlen. "Udført" sender trinet med og afvises, hvis det ikke længere er det næste. Et dobbelttryk flytter derfor ikke to containere. Hvert trin er en almindelig flytning (`moved`), der logges og kan fortrydes. Forsvinder målcontaineren fra lageret, stoppes planen.
+
 ## 6. Skærme
 
 Samme sider til tablet og pc. Tabletten får store trykflader (minimum 48 px), pc'en viser mere ad gangen. Al tekst er dansk, ingen sprogvælger.
@@ -115,7 +128,7 @@ Startskærm med én stor knap pr. aktiv bruger. Valget gemmes på enheden (sessi
 - **Opdatering:** Tavlen henter nyt hvert 3. sekund (Livewire polling), pauser mens der trækkes. Mister enheden forbindelsen, vises en rød bjælke, og bekræft-knappen låses, indtil den er tilbage.
 
 ### 6.3 Container-panel
-Åbnes ved tryk på en brik eller et søgeresultat: nummer, navn, kunde, plads, "kom ind til"-resultatet (afsnit 5), seneste handlinger på containeren, og redigering af navn og kunde (logges som `edited`).
+Åbnes ved tryk på en brik eller et søgeresultat: nummer, navn, kunde, plads, "kom ind til"-resultatet (afsnit 5) med knappen "Lav arbejdsplan" (afsnit 5.1), seneste handlinger på containeren, og redigering af navn og kunde (logges som `edited`).
 
 ### 6.4 Log
 Egen side: alle handlinger, nyeste øverst, med bruger, tidspunkt, handling, container, fra og til. Filtrering på bruger og container. Fortryd-knap på den post, der aktuelt kan fortrydes; de øvrige fortrydbare poster viser "fortryd først handlingen over".

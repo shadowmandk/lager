@@ -16,6 +16,7 @@ PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire
 - Alle ændringer af containere går gennem `MoveService`, så de logges. Fortryd går gennem `UndoService` med de samme regler.
 - Fortryd: vinduet er de 15 nyeste fortrydbare handlinger; kun den nyeste ikke-fortrudte kan fortrydes.
 - Flytning mellem lagre går via status `transit`: containeren holder sin reserverede bufferplads i placeringsfelterne (`Container::location()`), kan ikke tages, og intet kan sættes oven på den. `slot()` gælder kun containere på lager. Brug `Container::ON_SLOT`, når optagne pladser skal tælles.
+- Arbejdsplan (`WorkPlanner`): forslag til, hvor containerne i vejen skal stå, valgt efter færrest containere, der får én mere i vejen (`RowGrid::buriedBy`). Den ændrer intet. Board gemmer kun målcontainer og medarbejderens valg i sessionen (`workplan`) og regner planen forfra hver gang. Hvert trin udføres med `MoveService::move`.
 - Pladsnavne: "Lager 1 · A 3 2" (række, plads fra indgangen, højde nedefra), bufferstakke "Buffer 2 1". Laves af `StorageRow::slotName` og `LocationLabel`.
 
 ## Kommandoer
