@@ -12,6 +12,7 @@
         <nav class="flex gap-1">
             <a href="{{ route('board') }}" @class(['nav-btn', 'nav-btn-active' => $active === 'board'])>Tavle</a>
             <a href="{{ route('log') }}" @class(['nav-btn', 'nav-btn-active' => $active === 'log'])>Log</a>
+            <a href="{{ route('statistics') }}" @class(['nav-btn', 'nav-btn-active' => $active === 'statistics'])>Statistik</a>
         </nav>
 
         <div class="flex min-w-0 flex-1 items-center gap-2">

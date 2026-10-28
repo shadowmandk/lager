@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([LayoutSeeder::class, AdminSeeder::class]);
 
         if (app()->isLocal() || env('SEED_DEMO')) {
-            $this->call(DemoSeeder::class);
+            $this->call([DemoSeeder::class, DemoHistorySeeder::class]);
         }
     }
 }

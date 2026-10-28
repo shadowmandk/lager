@@ -118,11 +118,18 @@
 
         {{-- ================= Containere ================= --}}
         @if ($tab === 'containers')
-            <form wire:submit="createContainer" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-5">
-                <h2 class="text-lg font-semibold md:col-span-5">Ny container</h2>
+            <form wire:submit="createContainer" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-6">
+                <div class="md:col-span-6">
+                    <h2 class="text-lg font-semibold">Nye containere</h2>
+                    <p class="text-sm text-slate-600">Udfyld “Til nummer” for at oprette en hel serie på én gang, f.eks. 4101 til 4120. Numre, der allerede findes, springes over.</p>
+                </div>
                 <label class="block">
                     <span class="text-sm text-slate-600">Nummer</span>
-                    <input type="text" wire:model="containerForm.number" class="mt-1 h-11 w-full" required>
+                    <input type="text" wire:model="containerForm.number" class="mt-1 h-11 w-full uppercase" required>
+                </label>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Til nummer (valgfrit)</span>
+                    <input type="text" wire:model="containerForm.to" class="mt-1 h-11 w-full uppercase" placeholder="Kun ved serie">
                 </label>
                 <label class="block">
                     <span class="text-sm text-slate-600">Navn</span>
@@ -145,8 +152,8 @@
                     </select>
                 </label>
                 <div class="flex items-end"><button type="submit" class="btn-primary h-11 w-full">Opret</button></div>
-                @error('containerForm.number') <p class="text-red-700 md:col-span-5">{{ $message }}</p> @enderror
-                @error('containerForm.customer_id') <p class="text-red-700 md:col-span-5">{{ $message }}</p> @enderror
+                @error('containerForm.number') <p class="text-red-700 md:col-span-6">{{ $message }}</p> @enderror
+                @error('containerForm.customer_id') <p class="text-red-700 md:col-span-6">{{ $message }}</p> @enderror
             </form>
 
             <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">

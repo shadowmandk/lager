@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Activity;
 use App\Models\Container;
 use App\Models\StorageRow;
+use App\Support\NumberSeries;
 use App\Support\Slot;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -148,14 +149,14 @@ final class MoveService
             throw new MoveRejected('En ny container skal enten vente på plads eller være udleveret.');
         }
 
-        $number = trim($number);
+        $number = Container::normalizeNumber($number);
 
         if ($number === '') {
             throw new MoveRejected('Containeren skal have et nummer.');
         }
 
         return $this->transaction(function () use ($number, $name, $customerId, $status, $actor) {
-            if (Container::withTrashed()->where('number', $number)->exists()) {
+            if (Container::withTrashed()->whereRaw('upper(number) = ?', [$number])->exists()) {
                 throw new MoveRejected("Der findes allerede en container med nummer {$number}.");
             }
 
@@ -169,6 +170,34 @@ final class MoveService
             $this->log($container, Activity::CREATED, $actor, before: null);
 
             return $container;
+        });
+    }
+
+    /**
+     * Opret en hel nummerserie, f.eks. 4101 til 4120, med samme navn, kunde og status.
+     * Numre, der allerede findes, springes over.
+     *
+     * @return array{created: list<Container>, skipped: list<string>}
+     */
+    public function createSeries(string $from, string $to, ?string $name, ?int $customerId, string $status, Actor $actor): array
+    {
+        $numbers = NumberSeries::expand($from, $to);
+
+        return $this->transaction(function () use ($numbers, $name, $customerId, $status, $actor) {
+            $created = [];
+            $skipped = [];
+
+            foreach ($numbers as $number) {
+                if (Container::withTrashed()->whereRaw('upper(number) = ?', [$number])->exists()) {
+                    $skipped[] = $number;
+
+                    continue;
+                }
+
+                $created[] = $this->create($number, $name, $customerId, $status, $actor);
+            }
+
+            return ['created' => $created, 'skipped' => $skipped];
         });
     }
 

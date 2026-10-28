@@ -6,6 +6,7 @@ use App\Livewire\Admin;
 use App\Livewire\AdminLogin;
 use App\Livewire\Board;
 use App\Livewire\OperatorPicker;
+use App\Livewire\Statistics;
 use App\Support\BoardVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,7 @@ Route::get('/', OperatorPicker::class)->name('operator.pick');
 Route::middleware(EnsureOperator::class)->group(function () {
     Route::get('/tavle', Board::class)->name('board');
     Route::get('/log', ActivityLog::class)->name('log');
+    Route::get('/statistik', Statistics::class)->name('statistics');
 });
 
 Route::get('/ping', fn () => response()->json(['version' => BoardVersion::current()]))->name('ping');

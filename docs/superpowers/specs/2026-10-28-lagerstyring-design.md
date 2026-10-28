@@ -123,6 +123,21 @@ Egen side: alle handlinger, nyeste øverst, med bruger, tidspunkt, handling, con
 ### 6.5 Opsætning (kræver admin-login)
 Lagre, områder og rækker (med dybde/højde); kunder; tablet-brugere; oprettelse af containere (nummer, navn, kunde, placeres via tavlen bagefter eller oprettes som udleveret); indstillingen minutter pr. flytning; download af seneste database-backup.
 
+Oprettelse kan ske som nummerserie: "Nummer" og "Til nummer", f.eks. 4101 til 4120 eller MSKU001 til MSKU020 (samme forbogstaver, foranstillede nuller bevares, højst 200 ad gangen). Numre, der findes, springes over og nævnes.
+
+### 6.6 Ny container fra tavlen
+Knappen "Ny container" over listen "Venter på plads". Nummer (påkrævet), navn og kunde. Containeren oprettes som "venter på plads", logges under den valgte medarbejder og er valgt bagefter, så de grønne pladser lyser. Containernumre gemmes med store bogstaver og enkelte mellemrum, og dubletter afvises uanset store og små bogstaver.
+
+### 6.7 Statistik
+Egen side i menuen for alle medarbejdere. Ændrer intet. Viser
+- nøgletal for de seneste 7, 30 eller 90 dage: flytninger (placeret, flyttet, udleveret, hjemkommet, sendt til andet lager), ind (placeret eller hjemkommet), ud (udleveret) og andel optagne pladser,
+- kapacitet pr. lager: optaget, reserveret til containere på vej, ledige, opdelt på rækker og buffer,
+- ind og ud pr. uge de seneste 12 uger og gennemsnitlige flytninger pr. ugedag over de seneste 8 hele uger,
+- flytninger pr. medarbejder i perioden,
+- forecast: forventet ind og ud de næste 4 uger og hvornår hvert lager er fuldt, ud fra nettotilgangen pr. lager de seneste op til 8 hele uger. Kræver mindst 2 ugers historik.
+
+Fortrudte handlinger og fortrydelser tæller ikke med. Under hver graf kan tallene vises som tabel.
+
 ## 7. Isometrisk visning
 
 - Hver række tegnes som én SVG: dybden går vandret (dybde 1 til venstre ved indgangen), højden går opad, og hver container er en kasse set skråt fra siden, så siden, enden og toppen er synlige. Ingen container skjuler en anden.

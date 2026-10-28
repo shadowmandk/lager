@@ -38,6 +38,12 @@ class Board extends Component
 
     public ?int $returnCustomerId = null;
 
+    /** Formularen "Ny container" er åben. */
+    public bool $creating = false;
+
+    /** @var array{number: string, name: string, customer_id: string} */
+    public array $newContainer = ['number' => '', 'name' => '', 'customer_id' => ''];
+
     public ?int $panelId = null;
 
     public string $editName = '';
@@ -93,6 +99,51 @@ class Board extends Component
     public function cancelPick(): void
     {
         $this->picked = null;
+    }
+
+    public function openCreate(): void
+    {
+        $this->resetValidation();
+        $this->newContainer = ['number' => '', 'name' => '', 'customer_id' => ''];
+        $this->creating = true;
+        $this->panelId = null;
+    }
+
+    public function cancelCreate(): void
+    {
+        $this->creating = false;
+    }
+
+    /**
+     * Opret en container, der lige er kommet ind. Den venter på plads og er valgt med det samme,
+     * så de grønne pladser lyser og den kan sættes med ét tryk.
+     */
+    public function createContainer(): void
+    {
+        $data = $this->validate([
+            'newContainer.number' => ['required', 'string', 'max:30'],
+            'newContainer.name' => ['nullable', 'string', 'max:100'],
+            'newContainer.customer_id' => ['nullable', 'integer', 'exists:customers,id'],
+        ], [], [
+            'newContainer.number' => 'containernummer',
+            'newContainer.name' => 'navn',
+            'newContainer.customer_id' => 'kunde',
+        ])['newContainer'];
+
+        try {
+            $container = app(MoveService::class)->create(
+                $data['number'], $data['name'] ?? null, $this->validCustomerId((int) ($data['customer_id'] ?? 0)),
+                Container::PENDING, $this->actor(),
+            );
+        } catch (MoveRejected $e) {
+            $this->addError('newContainer.number', $e->getMessage());
+
+            return;
+        }
+
+        $this->creating = false;
+        $this->picked = $container->id;
+        $this->flash("Container {$container->number} er oprettet. Tryk på en grøn plads for at sætte den, eller Annullér for at lade den vente.");
     }
 
     /**

@@ -62,7 +62,7 @@ class Admin extends Component
     public array $adminForm = ['name' => '', 'email' => '', 'password' => ''];
 
     // Containere
-    public array $containerForm = ['number' => '', 'name' => '', 'customer_id' => '', 'status' => Container::PENDING];
+    public array $containerForm = ['number' => '', 'to' => '', 'name' => '', 'customer_id' => '', 'status' => Container::PENDING];
 
     public string $containerSearch = '';
 
@@ -324,26 +324,41 @@ class Admin extends Component
     {
         $data = $this->validate([
             'containerForm.number' => ['required', 'string', 'max:30'],
+            'containerForm.to' => ['nullable', 'string', 'max:30'],
             'containerForm.name' => ['nullable', 'string', 'max:100'],
             'containerForm.customer_id' => ['nullable', 'integer', 'exists:customers,id'],
             'containerForm.status' => ['required', Rule::in([Container::PENDING, Container::DELIVERED])],
         ])['containerForm'];
 
+        $moves = app(MoveService::class);
+        $customerId = $data['customer_id'] ? (int) $data['customer_id'] : null;
+        $where = $data['status'] === Container::PENDING ? 'De står under “Venter på plads” på tavlen.' : 'De er oprettet som udleveret.';
+
         try {
-            $container = app(MoveService::class)->create(
-                $data['number'], $data['name'] ?? null, $data['customer_id'] ? (int) $data['customer_id'] : null,
-                $data['status'], Actor::admin(auth()->user()),
-            );
+            if (trim((string) ($data['to'] ?? '')) !== '') {
+                $result = $moves->createSeries($data['number'], $data['to'], $data['name'] ?? null, $customerId, $data['status'], Actor::admin(auth()->user()));
+                $count = count($result['created']);
+                $message = $count === 0
+                    ? 'Ingen nye containere. Alle numre i serien findes allerede.'
+                    : "{$count} containere er oprettet, fra {$result['created'][0]->number} til {$result['created'][$count - 1]->number}. {$where}";
+
+                if ($result['skipped'] !== []) {
+                    $message .= ' Disse numre fandtes allerede og er sprunget over: '.implode(', ', $result['skipped']).'.';
+                }
+            } else {
+                $container = $moves->create($data['number'], $data['name'] ?? null, $customerId, $data['status'], Actor::admin(auth()->user()));
+                $message = $container->status === Container::PENDING
+                    ? "Container {$container->number} er oprettet. Den står under “Venter på plads” på tavlen."
+                    : "Container {$container->number} er oprettet som udleveret.";
+            }
         } catch (MoveRejected $e) {
             $this->addError('containerForm.number', $e->getMessage());
 
             return;
         }
 
-        $this->containerForm = ['number' => '', 'name' => '', 'customer_id' => $data['customer_id'] ?? '', 'status' => $data['status']];
-        $this->flash($container->status === Container::PENDING
-            ? "Container {$container->number} er oprettet. Den står under “Venter på plads” på tavlen."
-            : "Container {$container->number} er oprettet som udleveret.");
+        $this->containerForm = ['number' => '', 'to' => '', 'name' => '', 'customer_id' => $data['customer_id'] ?? '', 'status' => $data['status']];
+        $this->flash($message, ($count ?? 1) === 0 ? 'error' : 'ok');
     }
 
     public function deleteContainer(int $id): void

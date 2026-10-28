@@ -68,6 +68,12 @@ class Container extends Model
         return $this->status === self::STORED;
     }
 
+    /** Containernumre gemmes med store bogstaver og enkelte mellemrum, så "msku 1" og "MSKU 1" er samme container. */
+    public static function normalizeNumber(string $number): string
+    {
+        return mb_strtoupper(preg_replace('/\s+/u', ' ', trim($number)));
+    }
+
     public function isInTransit(): bool
     {
         return $this->status === self::TRANSIT;

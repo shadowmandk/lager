@@ -140,6 +140,10 @@
             @endif
 
             <section class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                <button type="button" wire:click="openCreate" class="btn-primary mb-3 flex h-14 w-full items-center justify-center gap-2 text-lg">
+                    <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    Ny container
+                </button>
                 <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Venter på plads ({{ $pendingList->count() }})</h2>
                 <div class="space-y-2">
                     @forelse ($pendingList as $c)
@@ -246,6 +250,43 @@
                             class="btn-primary h-14 text-lg disabled:opacity-50">Bekræft</button>
                 </div>
             </div>
+        </div>
+    @endif
+
+    {{-- Ny container --}}
+    @if ($creating)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4" data-confirm-open wire:key="create">
+            <form wire:submit="createContainer" class="w-full max-w-lg space-y-4 rounded-2xl bg-white p-5 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="create-title">
+                <h2 id="create-title" class="text-2xl font-semibold">Ny container</h2>
+                <p class="text-slate-600">Den kommer under “Venter på plads” og er valgt bagefter, så du kan sætte den med det samme.</p>
+
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-600">Containernummer</span>
+                    <input type="text" wire:model="newContainer.number" maxlength="30" autocomplete="off" autocapitalize="characters"
+                           class="mt-1 h-14 w-full rounded-lg border-slate-300 text-2xl font-semibold uppercase" autofocus>
+                    @error('newContainer.number') <span class="mt-1 block text-red-700">{{ $message }}</span> @enderror
+                </label>
+
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-600">Navn (valgfrit)</span>
+                    <input type="text" wire:model="newContainer.name" maxlength="100" class="mt-1 h-12 w-full rounded-lg border-slate-300 text-lg">
+                </label>
+
+                <label class="block">
+                    <span class="text-sm font-medium text-slate-600">Kunde (valgfrit)</span>
+                    <select wire:model="newContainer.customer_id" class="mt-1 h-12 w-full rounded-lg border-slate-300 text-lg">
+                        <option value="">Ingen kunde</option>
+                        @foreach ($customers as $cu)
+                            <option value="{{ $cu->id }}">{{ $cu->name }} ({{ $cu->number }})</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <button type="button" wire:click="cancelCreate" class="btn-secondary h-14 text-lg">Annullér</button>
+                    <button type="submit" wire:loading.attr="disabled" x-bind:disabled="!online" class="btn-primary h-14 text-lg disabled:opacity-50">Opret</button>
+                </div>
+            </form>
         </div>
     @endif
 
