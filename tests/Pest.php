@@ -48,3 +48,56 @@ function something()
 {
     // ..
 }
+
+/*
+|--------------------------------------------------------------------------
+| Hjælpere til lagertests
+|--------------------------------------------------------------------------
+*/
+
+function seedLayout(): void
+{
+    (new Database\Seeders\LayoutSeeder)->run();
+}
+
+function row(string $label): App\Models\StorageRow
+{
+    return App\Models\StorageRow::query()->with('zone.warehouse')->get()
+        ->first(fn ($r) => $r->label() === $label)
+        ?? throw new RuntimeException("Ukendt række {$label}");
+}
+
+function putAt(App\Models\StorageRow $row, int $depth, int $level, array $attrs = []): App\Models\Container
+{
+    static $n = 1;
+
+    return App\Models\Container::query()->create($attrs + [
+        'number' => 'T'.$n++,
+        'status' => App\Models\Container::STORED,
+        'storage_row_id' => $row->id,
+        'depth' => $depth,
+        'level' => $level,
+    ]);
+}
+
+/** Fyld kolonner i en række helt op. */
+function fillColumns(App\Models\StorageRow $row, array $depths): void
+{
+    foreach ($depths as $depth) {
+        foreach (range(1, $row->height) as $level) {
+            putAt($row, $depth, $level);
+        }
+    }
+}
+
+function actor(): App\Services\Actor
+{
+    $op = App\Models\Operator::query()->firstOrCreate(['name' => 'Test']);
+
+    return App\Services\Actor::operator($op);
+}
+
+function slot(App\Models\StorageRow $row, int $depth, int $level): App\Support\Slot
+{
+    return new App\Support\Slot($row->id, $depth, $level);
+}
