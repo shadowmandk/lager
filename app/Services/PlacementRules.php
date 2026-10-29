@@ -77,12 +77,21 @@ final class PlacementRules
     /** @return list<string> advarsler, der skal vises i bekræftelsesboksen */
     public function warnings(Slot $slot, ?int $ignoreContainerId = null): array
     {
-        $blocked = $this->blockedBehind($slot, $ignoreContainerId);
+        $row = StorageRow::query()->findOrFail($slot->rowId);
+        $grid = RowGrid::load($row)->without($ignoreContainerId);
+        $blocked = $grid->blockedBehind($slot->depth);
+        $warnings = [];
 
-        return match (true) {
-            $blocked === 1 => ['Du spærrer 1 tom plads bag ved.'],
-            $blocked > 1 => ["Du spærrer {$blocked} tomme pladser bag ved."],
-            default => [],
-        };
+        if ($available = $grid->trapsAvailable($slot->depth, $slot->level)) {
+            $warnings[] = "Du spærrer den ledige container {$available->number} inde. Den kan tages nu.";
+        }
+
+        if ($blocked === 1) {
+            $warnings[] = 'Du spærrer 1 tom plads bag ved.';
+        } elseif ($blocked > 1) {
+            $warnings[] = "Du spærrer {$blocked} tomme pladser bag ved.";
+        }
+
+        return $warnings;
     }
 }

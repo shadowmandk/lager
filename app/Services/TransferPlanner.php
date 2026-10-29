@@ -11,8 +11,9 @@ use Illuminate\Support\Collection;
 /**
  * Flytning mellem lagre: finder den bufferplads på det andet lager, containeren skal stå på.
  *
- * Valget er den lovlige bufferplads, der spærrer færrest tomme pladser inde og står lavest,
- * så stakkene holdes lave. Ved lighed vælges den første i opsætningens rækkefølge.
+ * Valget er den lovlige bufferplads, der ikke spærrer en ledig container inde, spærrer færrest
+ * tomme pladser inde og står lavest, så stakkene holdes lave. Ved lighed vælges den første i
+ * opsætningens rækkefølge.
  */
 final class TransferPlanner
 {
@@ -59,7 +60,7 @@ final class TransferPlanner
             $grid = RowGrid::load($row);
 
             foreach ($grid->legalTargets() as [$depth, $level]) {
-                $key = [$grid->blockedBehind($depth), $level, $order, -$depth];
+                $key = [$grid->trapsAvailable($depth, $level) ? 1 : 0, $grid->blockedBehind($depth), $level, $order, -$depth];
 
                 if ($bestKey === null || $key < $bestKey) {
                     $best = new Slot($row->id, $depth, $level);

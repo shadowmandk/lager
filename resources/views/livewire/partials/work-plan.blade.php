@@ -77,6 +77,9 @@
                                     @if ($step['buffer'])
                                         <span class="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">Buffer</span>
                                     @endif
+                                    @if ($step['traps'])
+                                        <span class="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">Spærrer ledig {{ $step['traps'] }} inde</span>
+                                    @endif
                                     @if ($step['chosen'])
                                         <span class="rounded bg-violet-100 px-1.5 py-0.5 font-semibold text-violet-800">Dit valg</span>
                                     @endif
@@ -104,6 +107,9 @@
                                         <span class="flex items-center gap-1.5 text-sm">
                                             @if ($opt['buffer'])
                                                 <span class="rounded bg-sky-100 px-1.5 py-0.5 font-semibold text-sky-800">Buffer</span>
+                                            @endif
+                                            @if ($opt['traps'])
+                                                <span class="rounded bg-amber-100 px-1.5 py-0.5 font-semibold text-amber-900">Spærrer ledig {{ $opt['traps'] }} inde</span>
                                             @endif
                                             <span @class(['text-emerald-700' => $opt['cost'] === 0, 'text-amber-800' => $opt['cost'] > 0])>{{ $costText($opt['cost']) }}</span>
                                             @if ($current) <span class="font-semibold text-violet-800">Valgt</span> @endif

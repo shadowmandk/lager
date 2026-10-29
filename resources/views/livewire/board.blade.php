@@ -335,6 +335,9 @@
                             Flyt <strong>{{ $next['container']->number }}</strong> fra <strong>{{ $next['fromLabel'] }}</strong>
                             til <strong class="text-violet-800">{{ $next['label'] }}</strong>
                         </p>
+                        @if ($next['traps'])
+                            <p class="font-semibold text-amber-900">Trinnet spærrer den ledige container {{ $next['traps'] }} inde.</p>
+                        @endif
                         @if ($work['plan']['problem'])
                             <p class="text-red-700">{{ $work['plan']['problem'] }}</p>
                         @endif

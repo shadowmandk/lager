@@ -97,6 +97,21 @@ final class RowGrid
         return $buried;
     }
 
+    /**
+     * Den ledige container, der kan tages nu, men ikke kan, hvis der sættes en container på pladsen.
+     * Kun den øverste i den forreste kolonne kan tages, så det er den, hvis pladsen er foran eller oven på den.
+     */
+    public function trapsAvailable(int $depth, int $level): ?Container
+    {
+        $top = $this->takeable();
+
+        if ($top === null || ! $top->isAvailable()) {
+            return null;
+        }
+
+        return $depth < $top->depth || ($depth === $top->depth && $level > $top->level) ? $top : null;
+    }
+
     public function at(int $depth, int $level): ?Container
     {
         return $this->cells[$depth][$level] ?? null;

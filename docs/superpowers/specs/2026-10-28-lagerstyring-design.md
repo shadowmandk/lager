@@ -60,6 +60,9 @@ En plads er lovlig, når
 ### 4.3 Advarsel ved hul (`PlacementRules::warnings`)
 Sættes en container i en kolonne, mens en kolonne med højere dybde i samme række ikke er fuld, gives en advarsel: "Du spærrer N tomme pladser bag ved." Flytningen tillades efter bekræftelse.
 
+### 4.3a Advarsel ved ledig container (`RowGrid::trapsAvailable`)
+En ledig container (på lager uden kunde) skal helst kunne tages, når den lejes ud. Kan den ledige container tages nu, og spærrer pladsen den (foran eller oven på den), gives advarslen "Du spærrer den ledige container X inde. Den kan tages nu." Da kun den øverste i den forreste kolonne kan tages, er det højst én pr. række. Er den ledige allerede spærret af andre, advares der ikke, så advarslen ikke kommer ved næsten hver flytning på et fyldt lager. Flytningen tillades efter bekræftelse. Arbejdsplanen og valget af bufferplads ved flytning mellem lagre undgår sådanne pladser først (se 4.4a og 5.1).
+
 ### 4.4 Flytning (`MoveService`)
 Én transaktion, der
 1. låser containeren og de to berørte rækker,
@@ -72,7 +75,7 @@ Samme klasse udfører udlevering (`canTake`, status → `delivered`, plads nulst
 ### 4.4a Flytning mellem lagre via transit (`TransferPlanner`, `MoveService::transfer` og `arrive`)
 Tilføjet efter første test, for at undgå fejl når en container skal over på det andet lager.
 1. I panelet for en container, der kan tages, står en knap pr. andet lager: "Flyt til Lager 2". Under knappen står den bufferplads, den får.
-2. Systemet vælger bufferpladsen: den lovlige plads i lagerets bufferområder, der spærrer færrest tomme pladser inde og står lavest, ved lighed den første i opsætningens rækkefølge.
+2. Systemet vælger bufferpladsen: den lovlige plads i lagerets bufferområder, der ikke spærrer en ledig container inde (4.3a), spærrer færrest tomme pladser inde og står lavest, ved lighed den første i opsætningens rækkefølge.
 3. Efter bekræftelse får containeren status `transit`. Den gamle plads bliver fri, og bufferpladsen er reserveret. Logposten hedder `transferred`.
 4. Når containeren er sat ned, trykker chaufføren "Sat i buffer" i panelet eller i listen "I transit". Efter bekræftelse er status `stored` på samme plads, og logposten hedder `arrived`.
 
@@ -103,7 +106,7 @@ Beregningen ændrer intet; den er et opslag.
 Når der skal flyttes containere for at komme ind til en container, kan panelet lave en arbejdsplan: et forslag til, hvor hver container i vejen skal stå. Planen er kun et forslag. Den skal startes, og hvert træk meldes udført.
 
 - **Rækkefølge:** Containerne i vejen tages i samme rækkefølge som i "kom ind til", altså forreste kolonne først og oppefra.
-- **Pladsvalg ("spær for færrest"):** For hver container regnes alle lovlige pladser i lagerets andre rækker og bufferen. Rækken, der graves i, er aldrig et valg. Hver plads får et tal for, hvor mange containere der får én mere i vejen (`RowGrid::buriedBy`). Det er dem nedenunder i samme kolonne og alle i kolonnerne bagved. Ved lighed vælges efter, hvor få tomme pladser der spærres inde (`blockedBehind`). Derefter vælges en række frem for bufferen, en lav plads frem for en høj, opsætningens rækkefølge og til sidst den dybeste plads.
+- **Pladsvalg ("spær for færrest"):** For hver container regnes alle lovlige pladser i lagerets andre rækker og bufferen. Rækken, der graves i, er aldrig et valg. Først fravælges pladser, der spærrer en ledig container inde (4.3a); er der kun sådanne, får trinnet mærkaten "Spærrer ledig X inde", også i bjælken nederst. Hver plads får et tal for, hvor mange containere der får én mere i vejen (`RowGrid::buriedBy`). Det er dem nedenunder i samme kolonne og alle i kolonnerne bagved. Ved lighed vælges efter, hvor få tomme pladser der spærres inde (`blockedBehind`). Derefter vælges en række frem for bufferen, en lav plads frem for en høj, opsætningens rækkefølge og til sidst den dybeste plads.
 - **Trin for trin:** Planen regnes igennem med de forrige trin udført (`RowGrid::with` og `without`). En container kommer derfor ikke oven på en, planen lige har flyttet, hvis der findes noget bedre.
 - **Skift plads:** Hvert trin viser de 8 bedste pladser med deres tal. Vælger medarbejderen en anden, planlægges de følgende trin om. Et valg, der ikke længere er lovligt, droppes med en besked.
 - **Kan ikke lade sig gøre:** Er der for få ledige pladser, siger planen, hvor mange der mangler. Står en container i transit i vejen, siges det. I begge tilfælde kan planen ikke startes.

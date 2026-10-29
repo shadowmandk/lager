@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Container;
+use App\Models\Customer;
 use App\Services\PlacementRules;
 use App\Services\RowGrid;
 
@@ -75,7 +76,7 @@ it('treats the lifted container as gone when finding targets in its own row', fu
 
 it('warns about empty slots that get blocked behind a placement', function () {
     fillColumns($this->a, [10]);
-    putAt($this->a, 9, 1);
+    putAt($this->a, 9, 1, ['customer_id' => Customer::query()->create(['number' => '1', 'name' => 'Jensen'])->id]);
 
     // Sætter man i kolonne 7, spærres kolonne 8 (3 tomme) og de 2 ledige oven på kolonne 9.
     expect($this->rules->blockedBehind(slot($this->a, 7, 1)))->toBe(5)

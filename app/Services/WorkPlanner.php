@@ -12,7 +12,8 @@ use Illuminate\Support\Collection;
  * Arbejdsplan: hvor skal containerne i vejen stå, så man kan komme ind til en bestemt container?
  *
  * Containerne i vejen flyttes i den rækkefølge, de kan tages. Hver får den lovlige plads i lagerets
- * andre rækker eller buffer, der giver færrest containere én mere i vejen. Ved lighed vælges pladsen,
+ * andre rækker eller buffer, der ikke spærrer en ledig container inde, som kan tages nu (traps), og
+ * derefter giver færrest containere én mere i vejen. Ved lighed vælges pladsen,
  * der spærrer færrest tomme pladser inde, så en række frem for bufferen, så den laveste plads.
  * Planen regnes igennem trin for trin, så hvert trin tager højde for de forrige. Ændrer intet.
  */
@@ -23,7 +24,7 @@ final class WorkPlanner
     /**
      * @param  array<int, string>  $overrides  containerens id => pladsnøgle, valgt af medarbejderen
      * @return array{
-     *     steps: list<array{container: Container, from: Slot, fromLabel: string, to: ?Slot, label: ?string, cost: int, buffer: bool, chosen: bool, options: list<array{key: string, label: string, cost: int, buffer: bool}>}>,
+     *     steps: list<array{container: Container, from: Slot, fromLabel: string, to: ?Slot, label: ?string, cost: int, buffer: bool, traps: ?string, chosen: bool, options: list<array{key: string, label: string, cost: int, buffer: bool, traps: ?string}>}>,
      *     blockers: int,
      *     missing: int,
      *     problem: ?string,
@@ -102,9 +103,10 @@ final class WorkPlanner
                 'label' => $choice['label'],
                 'cost' => $choice['cost'],
                 'buffer' => $choice['buffer'],
+                'traps' => $choice['traps'],
                 'chosen' => $chosen,
                 'options' => array_map(
-                    fn (array $c) => ['key' => $c['key'], 'label' => $c['label'], 'cost' => $c['cost'], 'buffer' => $c['buffer']],
+                    fn (array $c) => ['key' => $c['key'], 'label' => $c['label'], 'cost' => $c['cost'], 'buffer' => $c['buffer'], 'traps' => $c['traps']],
                     array_slice($candidates, 0, self::OPTIONS),
                 ),
             ];
@@ -143,6 +145,7 @@ final class WorkPlanner
             foreach ($grid->legalTargets() as [$depth, $level]) {
                 $slot = new Slot($row->id, $depth, $level);
                 $cost = $grid->buriedBy($depth, $level);
+                $traps = $grid->trapsAvailable($depth, $level)?->number;
 
                 $candidates[] = [
                     'slot' => $slot,
@@ -150,7 +153,8 @@ final class WorkPlanner
                     'label' => $row->slotName($depth, $level),
                     'cost' => $cost,
                     'buffer' => $buffer,
-                    'sort' => [$cost, $grid->blockedBehind($depth), $buffer ? 1 : 0, $level, $order, -$depth],
+                    'traps' => $traps,
+                    'sort' => [$traps === null ? 0 : 1, $cost, $grid->blockedBehind($depth), $buffer ? 1 : 0, $level, $order, -$depth],
                 ];
             }
         }
