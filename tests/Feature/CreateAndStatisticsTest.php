@@ -135,7 +135,7 @@ it('says so when there is too little history for a forecast', function () {
 });
 
 it('renders the statistics page for a chosen operator', function () {
-    $this->withSession(['operator_id' => $this->op->id])
+    $this->withSession(unlocked(['operator_id' => $this->op->id]))
         ->get('/statistik')
         ->assertOk()
         ->assertSee('Kapacitet lige nu')

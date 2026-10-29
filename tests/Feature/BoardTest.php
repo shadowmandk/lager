@@ -18,8 +18,8 @@ beforeEach(function () {
 });
 
 it('sends people without a chosen operator to the picker', function () {
-    $this->get('/tavle')->assertRedirect(route('operator.pick'));
-    $this->get('/log')->assertRedirect(route('operator.pick'));
+    $this->withSession(unlocked())->get('/tavle')->assertRedirect(route('operator.pick'));
+    $this->withSession(unlocked())->get('/log')->assertRedirect(route('operator.pick'));
 });
 
 it('keeps the admin pages behind a login', function () {
@@ -29,7 +29,7 @@ it('keeps the admin pages behind a login', function () {
 it('renders the board with the isometric rows', function () {
     putAt($this->a, 10, 1, ['number' => '4711']);
 
-    $this->withSession(['operator_id' => $this->op->id])
+    $this->withSession(unlocked(['operator_id' => $this->op->id]))
         ->get('/tavle')
         ->assertOk()
         ->assertSee('4711')
@@ -37,10 +37,10 @@ it('renders the board with the isometric rows', function () {
 });
 
 it('answers the ping with a version that changes when the board changes', function () {
-    $before = $this->getJson('/ping')->assertOk()->json('version');
+    $before = $this->withSession(unlocked())->getJson('/ping')->assertOk()->json('version');
     putAt($this->a, 10, 1);
 
-    expect($this->getJson('/ping')->json('version'))->not->toBe($before);
+    expect($this->withSession(unlocked())->getJson('/ping')->json('version'))->not->toBe($before);
 });
 
 it('moves a container through prepare and confirm, logged on the chosen operator', function () {

@@ -101,3 +101,12 @@ function slot(App\Models\StorageRow $row, int $depth, int $level): App\Support\S
 {
     return new App\Support\Slot($row->id, $depth, $level);
 }
+
+/** Session for en enhed, der er låst op med koden til låseskærmen. */
+function unlocked(array $session = []): array
+{
+    return $session + ['unlocked' => [
+        'v' => (int) App\Models\Setting::get('access.version'),
+        'seen' => now()->getTimestamp(),
+    ]];
+}

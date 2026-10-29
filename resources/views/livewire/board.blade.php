@@ -1,4 +1,4 @@
-<div x-data="board({ pingUrl: @js(route('ping')) })"
+<div x-data="board({ pingUrl: @js(route('ping')), unlockUrl: @js(route('unlock')) })"
      data-version="{{ $version }}"
      @pointerdown="down($event)"
      @click.capture="swallowClick($event)"

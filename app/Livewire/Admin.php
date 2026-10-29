@@ -22,6 +22,7 @@ use App\Services\MoveRejected;
 use App\Services\MoveService;
 use App\Support\Backups;
 use App\Support\CustomerPalette;
+use App\Support\DeviceLock;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -85,6 +86,11 @@ class Admin extends Component
 
     // Indstillinger
     public int|string $minutesPerMove = 4;
+
+    /** Ny kode til låseskærmen, tastet to gange. */
+    public string $accessCode = '';
+
+    public string $accessCodeRepeat = '';
 
     public ?string $notice = null;
 
@@ -540,6 +546,23 @@ class Admin extends Component
     }
 
     // ---------- Indstillinger ----------
+
+    public function saveAccessCode(): void
+    {
+        $this->validate([
+            'accessCode' => ['required', 'regex:/^\d{'.DeviceLock::CODE_LENGTH.'}$/'],
+            'accessCodeRepeat' => ['required', 'same:accessCode'],
+        ], [
+            'accessCode.required' => 'Skriv en kode.',
+            'accessCode.regex' => 'Koden skal være '.DeviceLock::CODE_LENGTH.' cifre.',
+            'accessCodeRepeat.required' => 'Skriv koden igen.',
+            'accessCodeRepeat.same' => 'De to koder er ikke ens.',
+        ]);
+
+        DeviceLock::setCode($this->accessCode);
+        $this->reset('accessCode', 'accessCodeRepeat');
+        $this->flash('Koden er skiftet. Alle tablets og pc\'er skal låses op med den nye kode.');
+    }
 
     public function saveSettings(): void
     {

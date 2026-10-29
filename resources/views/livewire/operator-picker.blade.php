@@ -22,5 +22,14 @@
         </div>
     @endif
 
-    <a href="{{ route('admin') }}" class="text-sm text-slate-500 underline underline-offset-4">Opsætning (kontor)</a>
+    <div class="flex items-center gap-6">
+        <form method="POST" action="{{ route('lock') }}">
+            @csrf
+            <button type="submit" class="btn-secondary h-12 gap-2">
+                <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                Lås
+            </button>
+        </form>
+        <a href="{{ route('admin') }}" class="text-sm text-slate-500 underline underline-offset-4">Opsætning (kontor)</a>
+    </div>
 </div>

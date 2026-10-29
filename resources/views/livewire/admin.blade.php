@@ -522,6 +522,32 @@
                 @error('minutesPerMove') <p class="w-full text-red-700">{{ $message }}</p> @enderror
             </form>
 
+            <form wire:submit="saveAccessCode" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                <h2 class="w-full text-lg font-semibold">Kode til låseskærmen</h2>
+                <p class="w-full text-sm text-slate-600">
+                    Tablets og pc'er skal taste koden for at åbne tavlen. Den låser igen, når skærmen slukkes, og efter
+                    {{ \App\Support\DeviceLock::IDLE_MINUTES }} minutter uden aktivitet.
+                    @if (\App\Support\DeviceLock::hasCode())
+                        Når koden skiftes, låses alle enheder.
+                    @else
+                        <strong class="text-red-700">Der er ikke valgt nogen kode endnu, så tavlen kan ikke åbnes.</strong>
+                    @endif
+                </p>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Ny kode ({{ \App\Support\DeviceLock::CODE_LENGTH }} cifre)</span>
+                    <input type="password" inputmode="numeric" autocomplete="new-password" maxlength="{{ \App\Support\DeviceLock::CODE_LENGTH }}"
+                           wire:model="accessCode" class="mt-1 h-11 w-40 tracking-widest">
+                </label>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Gentag koden</span>
+                    <input type="password" inputmode="numeric" autocomplete="new-password" maxlength="{{ \App\Support\DeviceLock::CODE_LENGTH }}"
+                           wire:model="accessCodeRepeat" class="mt-1 h-11 w-40 tracking-widest">
+                </label>
+                <button type="submit" class="btn-primary h-11">Skift kode</button>
+                @error('accessCode') <p class="w-full text-red-700">{{ $message }}</p> @enderror
+                @error('accessCodeRepeat') <p class="w-full text-red-700">{{ $message }}</p> @enderror
+            </form>
+
             <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-lg font-semibold">Backup</h2>

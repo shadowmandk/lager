@@ -27,5 +27,6 @@ PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire
 - Lokal server: `php artisan serve --port=8092`
 
 ## Adgang
+- Låseskærm (`/laas`) foran medarbejdervalg, tavle, log og statistik: fælles 6-cifret kode (`DeviceLock`, `EnsureUnlocked`, også som Livewire persistent middleware). Låser efter 30 minutter uden aktivitet (tavlens ping tæller ikke), når siden bliver skjult (`resources/js/lock.js`), med Lås-knappen, og når koden skiftes. Koden sættes af `AccessCodeSeeder` fra `ACCESS_CODE`, under Opsætning eller med `php artisan lager:kode`. HTTP-tests skal bruge `withSession(unlocked([...]))`.
 - Tavle og log: vælg medarbejder uden kodeord (`EnsureOperator`, også som Livewire persistent middleware).
 - Opsætning `/admin`: Laravel-login. Første admin oprettes af `AdminSeeder` fra `ADMIN_*` i `.env`.

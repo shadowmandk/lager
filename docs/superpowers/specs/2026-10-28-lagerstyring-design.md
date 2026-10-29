@@ -175,7 +175,8 @@ Kundens masterdata ligger i Microbizz. Systemet henter kunder og containere derf
 
 ## 8. Adgang
 
-- **Tablet-brugere** vælger bare navn. Ingen kodeord. Formålet er alene sporbarhed i loggen.
+- **Låseskærm:** enheden låses op med en fælles 6-cifret kode på et taltastatur, derefter vælger man navn. Den låser igen, når siden bliver skjult (skærm slukket, app eller fane skiftet), efter 30 minutter uden aktivitet, med Lås-knappen, og når admin skifter koden. Efter 5 forkerte koder skal man vente et minut, og ventetiden fordobles ved flere fejl.
+- **Tablet-brugere** vælger bare navn efter oplåsning. Navnet bruges til sporbarhed i loggen.
 - **Admin** logger ind med e-mail og adgangskode via Laravels standard-auth. Alle opsætningsruter ligger bag `auth`. Én admin oprettes ved installation (seeder); flere kan tilføjes under opsætning.
 - Ingen rollesystem ud over "tablet-bruger" og "admin".
 
@@ -209,7 +210,7 @@ Livewire-komponenterne testes let (siden renderer, flytning via komponent skrive
 
 ## 11. Drift
 
-- Hosting hos Curanet (VPS eller webhotel med PHP 8.4). Almindelig Laravel-udrulning med HTTPS.
+- Hosting på VPS hos Curanet (Ubuntu 24.04, nginx, PHP 8.4, Let's Encrypt) på lager.itxpartner.dk. `deploy/setup-server.sh` klargør serveren, `deploy/deploy.sh` opdaterer fra det private GitHub-repo. Se DEPLOY.md.
 - Cron kører `php artisan schedule:run` hvert minut; den står for backup og Microbizz-hentning.
 - Databasen er én SQLite-fil i `storage/`. En planlagt kommando (`backup:run`) tager dagligt en kopi til `storage/backups/`, beholder de seneste 30, og den seneste kan hentes fra opsætningssiden.
 - Ingen offline-tilstand. Tabletten skal have net; skærmen viser tydeligt, når den ikke har.

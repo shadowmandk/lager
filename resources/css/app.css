@@ -28,6 +28,16 @@
     }
     .nav-btn-active { @apply bg-slate-600 text-white; }
 
+    /* Låseskærmens taltastatur: store knapper til handsker og gaffeltruck */
+    .keypad-btn {
+        @apply flex h-20 items-center justify-center rounded-2xl bg-slate-700 text-3xl font-semibold text-white shadow active:bg-slate-600;
+    }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+
+    /* Mens skærmen er slukket, eller siden er på vej til låseskærmen, vises intet af tavlen. */
+    html.is-locking body > * { visibility: hidden; }
+    html.is-locking body { background: #1e293b; }
+
     .tab-btn {
         @apply h-9 whitespace-nowrap rounded-md px-3 text-base font-semibold text-slate-200 sm:px-4;
     }
@@ -103,8 +113,14 @@
     50% { fill-opacity: 0.4; }
 }
 
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .iso-row .slot.is-target, .iso-row .plan-ring { animation: none; }
+    .iso-row .slot.is-target, .iso-row .plan-ring, .animate-shake { animation: none; }
 }
 
 /* Statistik. Farverne er de to første faste serier fra diagram-paletten (blå = ind/står, orange = ud). */

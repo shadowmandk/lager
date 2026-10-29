@@ -4,6 +4,7 @@ use App\Services\Microbizz\MicrobizzClient;
 use App\Services\Microbizz\MicrobizzException;
 use App\Services\Microbizz\MicrobizzImporter;
 use App\Support\Backups;
+use App\Support\DeviceLock;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
@@ -29,6 +30,25 @@ Artisan::command('microbizz:sync', function (MicrobizzImporter $importer) {
 
     $this->info($run->summary().'.');
 })->purpose('Hent kunder og containere, der er ændret i Microbizz siden sidst');
+
+Artisan::command('lager:kode', function () {
+    $code = (string) $this->secret('Ny kode til låseskærmen ('.DeviceLock::CODE_LENGTH.' cifre)');
+
+    if (! DeviceLock::isValidCode($code)) {
+        $this->error('Koden skal være '.DeviceLock::CODE_LENGTH.' cifre.');
+
+        return 1;
+    }
+
+    if ($code !== (string) $this->secret('Gentag koden')) {
+        $this->error('De to koder er ikke ens.');
+
+        return 1;
+    }
+
+    DeviceLock::setCode($code);
+    $this->info('Koden er gemt. Alle enheder skal låses op med den nye kode.');
+})->purpose('Vælg koden til låseskærmen foran tavlen');
 
 Schedule::command('backup:run')->dailyAt('02:00');
 

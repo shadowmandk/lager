@@ -11,7 +11,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([LayoutSeeder::class, AdminSeeder::class]);
+        $this->call([LayoutSeeder::class, AdminSeeder::class, AccessCodeSeeder::class]);
 
         if (app()->isLocal() || env('SEED_DEMO')) {
             $this->call([DemoSeeder::class, DemoHistorySeeder::class]);

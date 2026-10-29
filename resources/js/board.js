@@ -12,7 +12,7 @@ const HOLD_MS = 220;
 const MOVE_TOLERANCE = 10;
 const POLL_MS = 3000;
 
-export default ({ pingUrl }) => ({
+export default ({ pingUrl, unlockUrl }) => ({
     online: navigator.onLine,
     dragging: null,
     press: null,
@@ -39,6 +39,8 @@ export default ({ pingUrl }) => ({
 
         try {
             const res = await fetch(pingUrl, { cache: 'no-store', headers: { Accept: 'application/json' } });
+            // Enheden er låst på serveren (30 minutter uden aktivitet, eller koden er skiftet).
+            if (res.status === 423) return location.replace(unlockUrl);
             if (!res.ok) throw new Error(res.status);
             const { version } = await res.json();
             this.online = true;
