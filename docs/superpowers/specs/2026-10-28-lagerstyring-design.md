@@ -120,7 +120,7 @@ Startskærm med én stor knap pr. aktiv bruger. Valget gemmes på enheden (sessi
 
 ### 6.2 Tavlen
 - Faner pr. lager. Hvert område tegnes som sine rækker under hinanden, hver række i isometrisk visning (afsnit 7).
-- Hver container er en brik med nummer og kundenavn, farvet efter kunde (fast farve pr. kunde udledt af kundenummeret).
+- Hver container er en brik med nummer og kundenavn, farvet efter kunde. En container på lager uden kunde er lys og hedder "LEDIG" (ledig til udlejning); søgning på "ledig" finder dem, og tavlen viser antallet. Under rækkerne står en fast forklaring af kanter, felter og farver.
 - Ved siden af tavlen: feltet **"Udleveret til kunde"** med liste over udleverede containere. Det er både drop-mål (udlevering) og kilde (hjemkomst).
 - **Træk og slip:** Hold fingeren på en brik ca. 250 ms, så den løfter sig, og træk. Kort tryk åbner container-panelet, almindeligt stryg ruller siden. Lovlige mål lyser grønt; alt andet er inaktivt. Brikker, der ikke kan tages, viser en lås og kan ikke løftes.
 - **Bekræftelsesboks** ved slip på et lovligt mål: nummer, navn, kunde, fra, til, eventuelle advarsler, knapperne "Bekræft" og "Annullér". Ved hjemkomst kan kunden vælges blandt eksisterende kunder.
@@ -189,7 +189,7 @@ Kundens masterdata ligger i Microbizz. Systemet henter kunder og containere derf
   - `app/Livewire/*` – komponenter til tavle, søg, container-panel, log, opsætning. De kalder kun services.
   - `resources/js/drag.js` – Alpine-komponent til træk og slip med Pointer Events (hold-for-at-løfte, lovlige mål, slip).
   - `resources/views/components/iso-row.blade.php` – SVG-tegning af én række.
-- Kundefarve: deterministisk hash af kundenummer til en palet på 12 farver med god kontrast i sollys.
+- Kundefarve: palet på 24 farver med god kontrast i sollys (`CustomerPalette`). Farven gemmes på kunden (`customers.color`); nye kunder får den mindst brugte, og admin kan vælge en anden under Opsætning → Kunder, også for kunder fra Microbizz.
 - Ingen Node i drift; Tailwind bygges én gang og committes som færdig CSS i `public/build`.
 
 ## 10. Test

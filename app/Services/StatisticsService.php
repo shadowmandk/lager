@@ -53,11 +53,14 @@ final class StatisticsService
             ->groupBy('storage_row_id', 'status')
             ->get();
 
+        $available = Container::query()->available()
+            ->selectRaw('storage_row_id, count(*) as n')->groupBy('storage_row_id')->pluck('n', 'storage_row_id');
+
         $list = [];
-        $total = ['capacity' => 0, 'used' => 0, 'free' => 0];
+        $total = ['capacity' => 0, 'used' => 0, 'free' => 0, 'available' => 0];
 
         foreach ($warehouses as $w) {
-            $row = ['name' => $w->name, 'rows_capacity' => 0, 'rows_used' => 0, 'buffer_capacity' => 0, 'buffer_used' => 0, 'transit' => 0];
+            $row = ['name' => $w->name, 'rows_capacity' => 0, 'rows_used' => 0, 'buffer_capacity' => 0, 'buffer_used' => 0, 'transit' => 0, 'available' => 0];
 
             foreach ($w->zones as $zone) {
                 foreach ($zone->rows as $r) {
@@ -66,6 +69,7 @@ final class StatisticsService
                     $row[$zone->is_buffer ? 'buffer_capacity' : 'rows_capacity'] += $r->capacity();
                     $row[$zone->is_buffer ? 'buffer_used' : 'rows_used'] += $n;
                     $row['transit'] += (int) $inRow->where('status', Container::TRANSIT)->sum('n');
+                    $row['available'] += (int) ($available[$r->id] ?? 0);
                 }
             }
 
@@ -74,7 +78,7 @@ final class StatisticsService
             $row['free'] = $row['capacity'] - $row['used'];
             $row['percent'] = $row['capacity'] > 0 ? (int) round($row['used'] / $row['capacity'] * 100) : 0;
 
-            foreach (['capacity', 'used', 'free'] as $k) {
+            foreach (['capacity', 'used', 'free', 'available'] as $k) {
                 $total[$k] += $row[$k];
             }
 

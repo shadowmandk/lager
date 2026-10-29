@@ -241,7 +241,11 @@
                                     @if ($cu->microbizz_inactive) <span class="ml-1 rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-700">Inaktiv i Microbizz</span> @endif
                                 </td>
                                 <td>{{ $cu->containers_count }}</td>
-                                <td class="space-x-1 text-right">
+                                <td class="space-x-1 whitespace-nowrap text-right">
+                                    <button type="button" wire:click="pickColor({{ $cu->id }})" class="btn-secondary h-9 gap-2 text-sm" aria-expanded="{{ $colorCustomerId === $cu->id ? 'true' : 'false' }}">
+                                        <span class="inline-block h-4 w-4 rounded-sm" style="background: {{ $cu->color()['side'] }}; box-shadow: inset 0 0 0 1px {{ $cu->color()['stroke'] }}"></span>
+                                        Farve
+                                    </button>
                                     @unless ($cu->isFromMicrobizz())
                                     <button type="button" wire:click="editCustomer({{ $cu->id }})" class="btn-secondary h-9 text-sm">Ret</button>
                                     @if ($cu->containers_count === 0)
@@ -250,6 +254,28 @@
                                     @endunless
                                 </td>
                             </tr>
+                            @if ($colorCustomerId === $cu->id)
+                                @php $current = \App\Support\CustomerPalette::index($cu); @endphp
+                                <tr wire:key="cu-color-{{ $cu->id }}">
+                                    <td colspan="4" class="pb-3">
+                                        <div class="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+                                            <p class="mb-2 text-sm text-slate-600">Vælg farve til {{ $cu->name }}. Tallet er, hvor mange andre kunder der har farven.</p>
+                                            <div class="grid grid-cols-6 gap-2 sm:grid-cols-8 lg:grid-cols-12">
+                                                @foreach (\App\Support\CustomerPalette::COLORS as $i => $col)
+                                                    @php $used = ($colorUsage[$i] ?? 0) - ($i === $current && $cu->color !== null ? 1 : 0); @endphp
+                                                    <button type="button" wire:click="setCustomerColor({{ $cu->id }}, {{ $i }})"
+                                                            @class(['flex h-12 flex-col items-center justify-center rounded-lg text-sm font-semibold', 'ring-4 ring-slate-900' => $i === $current])
+                                                            style="background: {{ $col['side'] }}; color: {{ $col['text'] }}; box-shadow: inset 0 0 0 1px {{ $col['stroke'] }}"
+                                                            aria-label="Farve {{ $i + 1 }}{{ $i === $current ? ', valgt' : '' }}, {{ $used }} andre kunder"
+                                                            aria-pressed="{{ $i === $current ? 'true' : 'false' }}">
+                                                        {{ $used > 0 ? $used : '' }}
+                                                    </button>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
                         @empty
                             <tr><td colspan="4" class="py-3 text-slate-500">Ingen kunder.</td></tr>
                         @endforelse

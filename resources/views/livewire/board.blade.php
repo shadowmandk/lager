@@ -45,7 +45,7 @@
                             <span class="h-8 w-2 rounded-sm" style="background: {{ $r->color()['side'] }}"></span>
                             <span>
                                 <span class="block font-semibold">{{ $r->number }} <span class="font-normal text-slate-600">{{ $r->name }}</span></span>
-                                <span class="block text-sm text-slate-600">{{ $r->customer?->name ?? 'Ingen kunde' }} · {{ \App\Services\LocationLabel::forContainer($r) }}</span>
+                                <span class="block text-sm text-slate-600">{{ $r->customerName() }} · {{ \App\Services\LocationLabel::forContainer($r) }}</span>
                             </span>
                         </button>
                     @endforeach
@@ -106,9 +106,7 @@
                 <p class="rounded-2xl bg-white p-6 text-slate-600">Der er ikke sat nogen rækker op endnu. Det gøres under opsætning.</p>
             @endforelse
 
-            <p class="px-1 text-sm text-slate-500">
-                Grøn kant: kan tages nu. Hold fingeren på den et øjeblik, og træk den til en grøn plads. Et kort tryk viser detaljer.
-            </p>
+            @include('livewire.partials.legend')
         </main>
 
         <aside class="grid content-start items-start gap-3 md:grid-cols-3 2xl:grid-cols-1">
@@ -120,6 +118,19 @@
                 Udlevér til kunde
             </div>
 
+            <section class="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                <div>
+                    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">Ledige til udlejning</h2>
+                    <p class="text-slate-700">
+                        <strong class="text-2xl">{{ $availableHere }}</strong> på {{ $warehouse?->name ?? 'lageret' }}
+                        @if ($availableTotal !== $availableHere) <span class="text-slate-500">· {{ $availableTotal }} i alt</span> @endif
+                    </p>
+                </div>
+                @if ($availableTotal > 0)
+                    <button type="button" wire:click="showAvailable" class="btn-secondary h-12 shrink-0">Vis dem</button>
+                @endif
+            </section>
+
             @if ($transitList->isNotEmpty())
                 <section class="rounded-2xl bg-sky-50 p-3 shadow-sm ring-1 ring-sky-200">
                     <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-sky-800">I transit ({{ $transitList->count() }})</h2>
@@ -127,7 +138,7 @@
                         @foreach ($transitList as $c)
                             <div wire:key="transit-{{ $c->id }}" class="overflow-hidden rounded-lg bg-white ring-1 ring-sky-200">
                                 <button type="button" wire:click="openPanel({{ $c->id }})" class="block w-full px-3 py-2 text-left active:bg-slate-50">
-                                    <span class="block truncate font-semibold">{{ $c->number }} <span class="font-normal text-slate-600">{{ $c->customer?->name ?? 'Ingen kunde' }}</span></span>
+                                    <span class="block truncate font-semibold">{{ $c->number }} <span class="font-normal text-slate-600">{{ $c->customerName() }}</span></span>
                                     <span class="block truncate text-sm text-sky-800">Til {{ \App\Services\LocationLabel::place($c->location()) }}</span>
                                 </button>
                                 <button type="button" wire:click="prepareArrive({{ $c->id }})" class="h-11 w-full border-t border-sky-100 bg-sky-600 font-semibold text-white active:bg-sky-700">

@@ -67,7 +67,7 @@
                     $isDim = $matches !== null && ! $isMatch;
                     $isPicked = $picked?->id === $c->id;
                     $isPlan = $planStep !== null && $planStep['id'] === $c->id;
-                    $customer = $c->customer ? \Illuminate\Support\Str::limit($c->customer->name, 13, '…') : 'Ingen kunde';
+                    $customer = $c->customer ? \Illuminate\Support\Str::limit($c->customer->name, 13, '…') : ($c->isAvailable() ? 'LEDIG' : 'Ingen kunde');
                     $inTransit = $c->isInTransit();
                 @endphp
                 <g @class(['ctr', 'ctr-take' => $isTake, 'ctr-dim' => $isDim, 'ctr-picked' => $isPicked, 'ctr-transit' => $inTransit, 'ctr-plan' => $isPlan])
@@ -77,7 +77,7 @@
                        data-drag-number="{{ $c->number }}" data-drag-label="{{ $customer }}" data-drag-color="{{ $col['side'] }}"
                    @endif
                    wire:click="openPanel({{ $c->id }})">
-                    <title>{{ $row->slotName($d, $l) }} · {{ $c->number }} · {{ $c->name }} · {{ $c->customer?->name ?? 'Ingen kunde' }}{{ $inTransit ? ' · i transit' : '' }}</title>
+                    <title>{{ $row->slotName($d, $l) }} · {{ $c->number }} · {{ $c->name }} · {{ $c->customerName() }}{{ $inTransit ? ' · i transit' : '' }}</title>
                     {{-- top --}}
                     <polygon points="{{ $x }},{{ $y }} {{ $x + $DX }},{{ $y - $DY }} {{ $x + $W + $DX }},{{ $y - $DY }} {{ $x + $W }},{{ $y }}"
                              fill="{{ $col['top'] }}" stroke="{{ $col['stroke'] }}" stroke-width="0.8"/>

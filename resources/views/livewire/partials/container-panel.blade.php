@@ -7,11 +7,15 @@
 
 <div class="fixed inset-0 z-40 flex justify-end bg-slate-900/40" wire:key="panel-{{ $c->id }}" wire:click.self="closePanel">
     <div class="flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="panel-title">
-        <div class="flex items-start justify-between gap-3 p-4" style="border-top: 8px solid {{ $col['side'] }}">
+        <div class="flex items-start justify-between gap-3 p-4" style="border-top: 8px solid {{ $c->isAvailable() ? $col['stroke'] : $col['side'] }}">
             <div>
                 <h2 id="panel-title" class="text-3xl font-bold">{{ $c->number }}</h2>
                 <p class="text-lg text-slate-700">{{ $c->name ?: 'Uden navn' }}</p>
-                <p class="text-slate-600">{{ $c->customer?->label() ?? 'Ingen kunde' }}</p>
+                @if ($c->isAvailable())
+                    <p><span class="rounded bg-slate-100 px-2 py-0.5 font-semibold text-slate-800 ring-1 ring-slate-400">Ledig til udlejning</span></p>
+                @else
+                    <p class="text-slate-600">{{ $c->customer?->label() ?? 'Ingen kunde' }}</p>
+                @endif
             </div>
             <button type="button" wire:click="closePanel" class="flex h-12 w-12 items-center justify-center rounded-lg bg-slate-100 text-slate-600" aria-label="Luk">
                 <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>

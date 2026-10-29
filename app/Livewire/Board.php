@@ -89,6 +89,11 @@ class Board extends Component
         $this->search = '';
     }
 
+    public function showAvailable(): void
+    {
+        $this->search = 'ledig';
+    }
+
     public function pick(int $containerId): void
     {
         $container = Container::query()->find($containerId);
@@ -729,6 +734,8 @@ class Board extends Component
             'work' => $work,
             'planStep' => $work['current'] ?? null,
             'microbizzOn' => app(MicrobizzClient::class)->isConfigured(),
+            'availableHere' => $stored->flatten()->filter(fn (Container $c) => $c->isAvailable())->count(),
+            'availableTotal' => Container::query()->available()->count(),
             'version' => BoardVersion::current(),
         ]);
     }

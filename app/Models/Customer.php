@@ -8,11 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
-    protected $fillable = ['number', 'name', 'microbizz_id', 'microbizz_inactive'];
+    protected $fillable = ['number', 'name', 'microbizz_id', 'microbizz_inactive', 'color'];
 
     protected function casts(): array
     {
-        return ['microbizz_id' => 'integer', 'microbizz_inactive' => 'boolean'];
+        return ['microbizz_id' => 'integer', 'microbizz_inactive' => 'boolean', 'color' => 'integer'];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Customer $customer) {
+            $customer->color ??= CustomerPalette::leastUsed();
+        });
     }
 
     /** Kommer fra Microbizz, som bestemmer nummer og navn. */

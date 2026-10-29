@@ -115,7 +115,25 @@ class Container extends Model
     /** @return array{side: string, top: string, end: string, stroke: string, text: string} */
     public function color(): array
     {
-        return CustomerPalette::for($this->customer);
+        return $this->isAvailable() ? CustomerPalette::AVAILABLE : CustomerPalette::for($this->customer);
+    }
+
+    /** Står på lager uden kunde og er ledig til udlejning. */
+    public function isAvailable(): bool
+    {
+        return $this->status === self::STORED && $this->customer_id === null;
+    }
+
+    /** Kundens navn, "Ledig" for en ledig container og ellers "Ingen kunde". */
+    public function customerName(): string
+    {
+        return $this->customer?->name ?? ($this->isAvailable() ? 'Ledig' : 'Ingen kunde');
+    }
+
+    /** Containere, der står på lager uden kunde. */
+    public function scopeAvailable(Builder $query): void
+    {
+        $query->where('status', self::STORED)->whereNull('customer_id');
     }
 
     /** Søger i containernummer, containernavn, kundenavn og kundenummer. */
@@ -129,8 +147,12 @@ class Container extends Model
 
         $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $term).'%';
 
-        $query->where(function (Builder $q) use ($like) {
-            $q->where('number', 'like', $like)
+        // "ledig" eller "ledige" finder også alle ledige containere.
+        $available = mb_strlen($term) >= 4 && str_starts_with('ledige', mb_strtolower($term));
+
+        $query->where(function (Builder $q) use ($like, $available) {
+            $q->when($available, fn (Builder $a) => $a->orWhere(fn (Builder $s) => $s->available()))
+                ->orWhere('number', 'like', $like)
                 ->orWhere('name', 'like', $like)
                 ->orWhereHas('customer', fn (Builder $c) => $c
                     ->where('name', 'like', $like)

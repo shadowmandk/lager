@@ -14,7 +14,7 @@
             <div>
                 <div class="text-sm font-semibold uppercase tracking-wide text-violet-700">Arbejdsplan</div>
                 <h2 id="plan-title" class="text-2xl font-bold">Kom ind til {{ $target->number }}</h2>
-                <p class="text-slate-700">{{ $target->customer?->name ?? 'Ingen kunde' }} · står på {{ $work['targetLabel'] }}</p>
+                <p class="text-slate-700">{{ $target->customerName() }} · står på {{ $work['targetLabel'] }}</p>
             </div>
             <button type="button" wire:click="closePlan" class="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600" aria-label="Luk">
                 <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -66,7 +66,7 @@
                             <div class="min-w-0 flex-1">
                                 <div class="flex flex-wrap items-baseline gap-x-2">
                                     <span class="text-lg font-bold">{{ $sc->number }}</span>
-                                    <span class="truncate text-sm text-slate-600">{{ $sc->customer?->name ?? 'Ingen kunde' }}</span>
+                                    <span class="truncate text-sm text-slate-600">{{ $sc->customerName() }}</span>
                                 </div>
                                 <dl class="mt-1 grid grid-cols-[2.5rem_1fr] gap-y-0.5 text-lg">
                                     <dt class="text-slate-500">Fra</dt><dd class="font-medium">{{ $step['fromLabel'] }}</dd>

@@ -49,7 +49,7 @@
             <div class="stat-tile">
                 <div class="stat-label">Pladser optaget</div>
                 <div class="stat-value">{{ $capacity['total']['percent'] }} %</div>
-                <div class="stat-sub">{{ $fmt($capacity['total']['free']) }} af {{ $fmt($capacity['total']['capacity']) }} pladser er ledige</div>
+                <div class="stat-sub">{{ $fmt($capacity['total']['free']) }} af {{ $fmt($capacity['total']['capacity']) }} pladser er ledige · {{ $fmt($capacity['total']['available']) }} containere ledige til udlejning</div>
             </div>
         </div>
 
@@ -80,7 +80,8 @@
                             <div class="mt-1 text-sm text-slate-600">
                                 Rækker {{ $w['rows_used'] }}/{{ $w['rows_capacity'] }} · Buffer {{ $w['buffer_used'] }}/{{ $w['buffer_capacity'] }}
                                 @if ($w['transit'] > 0) · {{ $w['transit'] }} på vej hertil @endif
-                                · <strong>{{ $fmt($w['free']) }} ledige</strong>
+                                · <strong>{{ $fmt($w['free']) }} ledige pladser</strong>
+                                · {{ $fmt($w['available']) }} {{ $w['available'] === 1 ? 'container' : 'containere' }} ledige til udlejning
                             </div>
                         </div>
                     @endforeach

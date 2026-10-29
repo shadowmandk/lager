@@ -21,6 +21,7 @@ use App\Services\Microbizz\MicrobizzSettings;
 use App\Services\MoveRejected;
 use App\Services\MoveService;
 use App\Support\Backups;
+use App\Support\CustomerPalette;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -57,6 +58,9 @@ class Admin extends Component
 
     // Kunder
     public ?int $editCustomerId = null;
+
+    /** Kunden, hvis farvepalet er åben. */
+    public ?int $colorCustomerId = null;
 
     public array $customerForm = ['number' => '', 'name' => ''];
 
@@ -275,6 +279,25 @@ class Admin extends Component
 
         $this->editCustomerId = null;
         $this->flash('Kunden er gemt.');
+    }
+
+    public function pickColor(int $id): void
+    {
+        $this->colorCustomerId = $this->colorCustomerId === $id ? null : $id;
+    }
+
+    /** Farven er kun til tavlen og må vælges, også for kunder fra Microbizz. */
+    public function setCustomerColor(int $id, int $color): void
+    {
+        if (! isset(CustomerPalette::COLORS[$color])) {
+            return;
+        }
+
+        $customer = Customer::query()->findOrFail($id);
+        $customer->update(['color' => $color]);
+
+        $this->colorCustomerId = null;
+        $this->flash("{$customer->name} har fået ny farve.");
     }
 
     public function deleteCustomer(int $id): void
@@ -546,6 +569,7 @@ class Admin extends Component
                         ->where('name', 'like', '%'.$this->customerSearch.'%')
                         ->orWhere('number', 'like', '%'.$this->customerSearch.'%')))
                     ->orderBy('name')->get(),
+                'colorUsage' => $this->colorCustomerId ? CustomerPalette::usage() : [],
             ],
             'people' => [
                 'operators' => Operator::query()->orderByDesc('active')->orderBy('name')->get(),
