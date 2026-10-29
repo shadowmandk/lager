@@ -89,18 +89,47 @@
     @if ($confirmEntry)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
             <div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" role="dialog" aria-modal="true">
-                <h2 class="text-2xl font-semibold">Fortryd handling?</h2>
-                <p class="mt-3 text-lg">
-                    {{ $confirmEntry->label() }} af <strong>{{ $confirmEntry->container?->number }}</strong>
-                    @if ($confirmEntry->action === 'edited')
-                        rulles tilbage, så navn og kunde bliver som før.
-                    @else
-                        rulles tilbage. Containeren sendes tilbage til: <strong>{{ $confirmEntry->from_label }}</strong>.
+                @php($at = $confirmEntry->created_at)
+                <h2 class="text-2xl font-semibold">Fortryd {{ $confirmEntry->undoNoun() }} af {{ $confirmEntry->container?->number }}?</h2>
+                <p class="mt-2 text-slate-600">
+                    {{ $confirmEntry->label() }} af {{ $confirmEntry->actorName() }}
+                    {{ $at->isToday() ? 'i dag' : $at->format('d.m.Y') }} kl. {{ $at->format('H:i') }}
+                    @if ($confirmEntry->container?->customer)
+                        <br>Kunde: {{ $confirmEntry->container->customer->name }}
                     @endif
                 </p>
+
+                <div class="mt-4 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-200">
+                    @if ($confirmEntry->action === 'edited')
+                        <p class="font-medium">Navn og kunde sættes tilbage til, som de var før</p>
+                        <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-lg">
+                            @if ($confirmEntry->from_name !== $confirmEntry->to_name)
+                                <dt class="text-slate-500">Navn</dt>
+                                <dd>{{ $confirmEntry->to_name ?? '–' }} → <strong class="text-emerald-700">{{ $confirmEntry->from_name ?? '–' }}</strong></dd>
+                            @endif
+                            @if ($confirmEntry->from_customer_id !== $confirmEntry->to_customer_id)
+                                <dt class="text-slate-500">Kunde</dt>
+                                <dd>{{ $confirmEntry->toCustomer?->name ?? 'ingen' }} → <strong class="text-emerald-700">{{ $confirmEntry->fromCustomer?->name ?? 'ingen' }}</strong></dd>
+                            @endif
+                        </dl>
+                    @else
+                        <p class="font-medium">På tavlen flyttes containeren</p>
+                        <dl class="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-lg">
+                            <dt class="text-slate-500">fra</dt>
+                            <dd class="font-semibold">{{ $confirmEntry->to_label }}</dd>
+                            <dt class="text-slate-500">til</dt>
+                            <dd class="font-semibold text-emerald-700">{{ $confirmEntry->from_label }} <span class="font-normal text-slate-500">(hvor den var før)</span></dd>
+                            @if ($confirmEntry->action === 'returned' && $confirmEntry->from_customer_id !== $confirmEntry->to_customer_id)
+                                <dt class="text-slate-500">Kunde</dt>
+                                <dd>{{ $confirmEntry->toCustomer?->name ?? 'ingen' }} → <strong class="text-emerald-700">{{ $confirmEntry->fromCustomer?->name ?? 'ingen' }}</strong></dd>
+                            @endif
+                        </dl>
+                    @endif
+                </div>
+
                 <div class="mt-6 grid grid-cols-2 gap-3">
                     <button type="button" wire:click="cancelUndo" class="btn-secondary h-14 text-lg">Annullér</button>
-                    <button type="button" wire:click="undo" class="btn-primary h-14 text-lg">Fortryd</button>
+                    <button type="button" wire:click="undo" class="btn-primary h-14 text-lg">Udfør</button>
                 </div>
             </div>
         </div>

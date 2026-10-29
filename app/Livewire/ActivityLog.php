@@ -60,7 +60,7 @@ class ActivityLog extends Component
         try {
             $undo = app(UndoService::class)->undo($activity, Actor::operator((int) session('operator_id')));
             $number = $activity->container?->number;
-            $this->flash("{$activity->label()} af {$number} er fortrudt. Containeren står nu: {$undo->to_label}.");
+            $this->flash("Fortrudt: {$activity->undoNoun()} af {$number}. Containeren står nu: {$undo->to_label}.");
         } catch (MoveRejected $e) {
             $this->flash($e->getMessage(), 'error');
         }
@@ -85,7 +85,9 @@ class ActivityLog extends Component
             'operators' => Operator::query()->orderBy('name')->get(),
             'windowIds' => $window->pluck('id')->flip()->all(),
             'candidateId' => $candidate?->id,
-            'confirmEntry' => $this->confirmUndoId ? Activity::query()->with('container')->find($this->confirmUndoId) : null,
+            'confirmEntry' => $this->confirmUndoId
+                ? Activity::query()->with('container.customer', 'operator', 'user', 'fromCustomer', 'toCustomer')->find($this->confirmUndoId)
+                : null,
         ]);
     }
 

@@ -104,11 +104,18 @@ it('undoes from the log page', function () {
 
     $log = Activity::query()->first();
 
-    Livewire::test(ActivityLog::class)
+    $page = Livewire::test(ActivityLog::class)
         ->assertSee('Fortryd')
-        ->call('askUndo', $log->id)
-        ->call('undo')
-        ->assertSet('noticeType', 'ok');
+        ->call('askUndo', $log->id);
+
+    expect($page->html())
+        ->toContain("Fortryd flytning af {$c->number}?")
+        ->toMatch('/fra<\/dt>\s*<dd[^>]*>Lager 1 · B 10 1<\/dd>\s*<dt[^>]*>til<\/dt>\s*<dd[^>]*>Lager 1 · A 10 1 /u')
+        ->toContain('>Udfør</button>');
+
+    $page->call('undo')
+        ->assertSet('noticeType', 'ok')
+        ->assertSet('notice', "Fortrudt: flytning af {$c->number}. Containeren står nu: {$log->from_label}.");
 
     expect($c->fresh()->storage_row_id)->toBe($this->a->id);
 });

@@ -46,6 +46,17 @@ class Activity extends Model
         self::SYNCED => 'Opdateret fra Microbizz',
     ];
 
+    /** Handlingen som navneord, til "Fortryd flytning af 4012?". */
+    public const UNDO_NOUNS = [
+        self::PLACED => 'placering',
+        self::MOVED => 'flytning',
+        self::DELIVERED => 'udlevering',
+        self::RETURNED => 'hjemkomst',
+        self::EDITED => 'rettelse',
+        self::TRANSFERRED => 'sending til andet lager',
+        self::ARRIVED => 'modtagelse i buffer',
+    ];
+
     public const UPDATED_AT = null;
 
     protected $table = 'activity_log';
@@ -95,6 +106,11 @@ class Activity extends Model
     public function label(): string
     {
         return self::LABELS[$this->action] ?? $this->action;
+    }
+
+    public function undoNoun(): string
+    {
+        return self::UNDO_NOUNS[$this->action] ?? 'handling';
     }
 
     public function actorName(): string
