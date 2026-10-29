@@ -2,7 +2,7 @@
 #
 # Klargør en ny Ubuntu 24.04-VPS til Lagerstyring. Køres én gang som root:
 #
-#   sudo bash setup-server.sh lager.itxpartner.dk git@github.com:ORG/lagerstyring.git din@email.dk
+#   sudo bash setup-server.sh lager.itxpartner.dk git@github.com:shadowmandk/lager.git din@email.dk
 #
 # Installerer PHP 8.4, nginx, Composer, HTTPS-certifikat (Let's Encrypt), firewall og cron.
 # Opretter brugeren "lager", som ejer koden og kører PHP. Scriptet kan køres igen uden skade.
@@ -10,7 +10,7 @@
 set -euo pipefail
 
 DOMAIN="${1:?Angiv domæne, fx lager.itxpartner.dk}"
-REPO="${2:?Angiv git-adressen til det private repo, fx git@github.com:ORG/lagerstyring.git}"
+REPO="${2:?Angiv git-adressen til det private repo, fx git@github.com:shadowmandk/lager.git}"
 EMAIL="${3:?Angiv en email til Let's Encrypt (bruges til besked om udløbende certifikat)}"
 
 APP_USER=lager

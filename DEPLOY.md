@@ -15,7 +15,7 @@ Kopiér scriptet op og kør det som root:
 ```bash
 scp deploy/setup-server.sh root@SERVER:
 ssh root@SERVER
-bash setup-server.sh lager.itxpartner.dk git@github.com:ORG/REPO.git din@email.dk
+bash setup-server.sh lager.itxpartner.dk git@github.com:shadowmandk/lager.git din@email.dk
 ```
 Scriptet installerer PHP 8.4, nginx, Composer, firewall (kun SSH, HTTP og HTTPS), cron og et gratis HTTPS-certifikat fra Let's Encrypt, der fornyer sig selv. Det opretter brugeren `lager`, som ejer koden i `/var/www/lagerstyring` og kører PHP.
 
@@ -27,7 +27,7 @@ Pegede DNS ikke på serveren endnu, skriver scriptet den certbot-kommando, du sk
 Alt herfra køres som brugeren `lager`:
 ```bash
 sudo -iu lager
-git clone git@github.com:ORG/REPO.git /var/www/lagerstyring
+git clone git@github.com:shadowmandk/lager.git /var/www/lagerstyring
 cd /var/www/lagerstyring
 composer install --no-dev --optimize-autoloader
 cp .env.production.example .env
