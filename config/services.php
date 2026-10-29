@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    // Kundens Microbizz. Er kontrakt, nøgle, bruger eller kodeord tomt, er integrationen slået fra.
+    'microbizz' => [
+        'endpoint' => env('MICROBIZZ_ENDPOINT', 'https://system.microbizz.dk/api/endpoint.php'),
+        'contract' => env('MICROBIZZ_CONTRACT'),
+        'apikey' => env('MICROBIZZ_APIKEY'),
+        'username' => env('MICROBIZZ_USERNAME'),
+        'password' => env('MICROBIZZ_PASSWORD'),
+        'timeout' => (int) env('MICROBIZZ_TIMEOUT', 60),
+    ],
+
 ];

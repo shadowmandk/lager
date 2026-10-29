@@ -27,6 +27,9 @@ class Activity extends Model
     /** Meldt sat i buffer efter transit. */
     public const ARRIVED = 'arrived';
 
+    /** Nummer, navn eller kunde opdateret fra Microbizz. Kan ikke fortrydes. */
+    public const SYNCED = 'synced';
+
     /** Handlinger, der kan fortrydes. */
     public const UNDOABLE = [self::PLACED, self::MOVED, self::DELIVERED, self::RETURNED, self::EDITED, self::TRANSFERRED, self::ARRIVED];
 
@@ -40,6 +43,7 @@ class Activity extends Model
         self::UNDONE => 'Fortrudt',
         self::TRANSFERRED => 'Sendt til andet lager',
         self::ARRIVED => 'Sat i buffer',
+        self::SYNCED => 'Opdateret fra Microbizz',
     ];
 
     public const UPDATED_AT = null;
@@ -95,6 +99,10 @@ class Activity extends Model
 
     public function actorName(): string
     {
+        if ($this->source === 'microbizz') {
+            return 'Microbizz';
+        }
+
         return $this->operator?->name ?? ($this->user ? $this->user->name.' (admin)' : 'Ukendt');
     }
 

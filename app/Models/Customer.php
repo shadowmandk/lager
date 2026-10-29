@@ -8,7 +8,18 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Customer extends Model
 {
-    protected $fillable = ['number', 'name'];
+    protected $fillable = ['number', 'name', 'microbizz_id', 'microbizz_inactive'];
+
+    protected function casts(): array
+    {
+        return ['microbizz_id' => 'integer', 'microbizz_inactive' => 'boolean'];
+    }
+
+    /** Kommer fra Microbizz, som bestemmer nummer og navn. */
+    public function isFromMicrobizz(): bool
+    {
+        return $this->microbizz_id !== null;
+    }
 
     public function containers(): HasMany
     {

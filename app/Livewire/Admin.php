@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Models\Container;
 use App\Models\Customer;
+use App\Models\MicrobizzSync;
 use App\Models\Operator;
 use App\Models\Setting;
 use App\Models\StorageRow;
@@ -13,6 +14,10 @@ use App\Models\Zone;
 use App\Services\Actor;
 use App\Services\LayoutService;
 use App\Services\LocationLabel;
+use App\Services\Microbizz\MicrobizzClient;
+use App\Services\Microbizz\MicrobizzException;
+use App\Services\Microbizz\MicrobizzImporter;
+use App\Services\Microbizz\MicrobizzSettings;
 use App\Services\MoveRejected;
 use App\Services\MoveService;
 use App\Support\Backups;
@@ -30,6 +35,7 @@ class Admin extends Component
         'containers' => 'Containere',
         'customers' => 'Kunder',
         'people' => 'Medarbejdere',
+        'microbizz' => 'Microbizz',
         'settings' => 'Indstillinger og backup',
     ];
 
@@ -66,6 +72,13 @@ class Admin extends Component
 
     public string $containerSearch = '';
 
+    // Microbizz
+    /** @var array{filter_field: string, filter_value: string, number_field: string, name_field: string, new_status: string} */
+    public array $mbForm = [];
+
+    /** Svaret fra "Test forbindelse". */
+    public ?array $probe = null;
+
     // Indstillinger
     public int|string $minutesPerMove = 4;
 
@@ -82,6 +95,7 @@ class Admin extends Component
         }
 
         $this->minutesPerMove = Setting::minutesPerMove();
+        $this->mbForm = $this->currentMicrobizzSettings();
     }
 
     public function setTab(string $tab): void
@@ -223,6 +237,13 @@ class Admin extends Component
     public function editCustomer(?int $id = null): void
     {
         $customer = $id ? Customer::query()->findOrFail($id) : null;
+
+        if ($reason = $this->microbizzOwnsCustomer($customer)) {
+            $this->flash($reason, 'error');
+
+            return;
+        }
+
         $this->editCustomerId = $customer?->id ?? 0;
         $this->customerForm = ['number' => $customer->number ?? '', 'name' => $customer->name ?? ''];
         $this->resetValidation();
@@ -236,6 +257,12 @@ class Admin extends Component
     public function saveCustomer(): void
     {
         $id = $this->editCustomerId ?: null;
+
+        if ($reason = $this->microbizzOwnsCustomer($id ? Customer::query()->findOrFail($id) : null)) {
+            $this->flash($reason, 'error');
+
+            return;
+        }
 
         $data = $this->validate([
             'customerForm.number' => ['required', 'string', 'max:30', Rule::unique('customers', 'number')->ignore($id)],
@@ -253,6 +280,12 @@ class Admin extends Component
     public function deleteCustomer(int $id): void
     {
         $customer = Customer::query()->findOrFail($id);
+
+        if ($customer->isFromMicrobizz()) {
+            $this->flash("{$customer->name} kommer fra Microbizz og slettes der.", 'error');
+
+            return;
+        }
 
         if ($customer->containers()->exists()) {
             $this->flash("{$customer->name} har containere tilknyttet og kan ikke slettes.", 'error');
@@ -322,6 +355,12 @@ class Admin extends Component
 
     public function createContainer(): void
     {
+        if ($this->microbizzOn()) {
+            $this->flash('Nye containere oprettes i Microbizz og hentes herind.', 'error');
+
+            return;
+        }
+
         $data = $this->validate([
             'containerForm.number' => ['required', 'string', 'max:30'],
             'containerForm.to' => ['nullable', 'string', 'max:30'],
@@ -365,6 +404,12 @@ class Admin extends Component
     {
         $container = Container::query()->findOrFail($id);
 
+        if ($container->isFromMicrobizz()) {
+            $this->flash("Container {$container->number} kommer fra Microbizz og fjernes der.", 'error');
+
+            return;
+        }
+
         if ($container->occupiesSlot()) {
             $this->flash("Container {$container->number} står på lageret eller er i transit. Udlevér den eller flyt den væk fra tavlen først.", 'error');
 
@@ -373,6 +418,102 @@ class Admin extends Component
 
         $container->delete();
         $this->flash("Container {$container->number} er fjernet fra systemet. Historikken bevares i loggen.");
+    }
+
+    // ---------- Microbizz ----------
+
+    public function saveMicrobizz(): void
+    {
+        $data = $this->validate([
+            'mbForm.filter_field' => ['required', Rule::in(array_keys(MicrobizzSettings::FILTER_FIELDS))],
+            'mbForm.filter_value' => ['nullable', 'string', 'max:100', Rule::requiredIf(fn () => ($this->mbForm['filter_field'] ?? '') !== 'all')],
+            'mbForm.number_field' => ['required', Rule::in(array_keys(MicrobizzSettings::NUMBER_FIELDS))],
+            'mbForm.name_field' => ['required', Rule::in(array_keys(MicrobizzSettings::NAME_FIELDS))],
+            'mbForm.new_status' => ['required', Rule::in(array_keys(MicrobizzSettings::NEW_STATUSES))],
+        ], [], [
+            'mbForm.filter_value' => 'værdi',
+        ])['mbForm'];
+
+        $data['filter_value'] = trim((string) ($data['filter_value'] ?? ''));
+        $before = $this->currentMicrobizzSettings();
+
+        Setting::put(MicrobizzSettings::FILTER_FIELD, $data['filter_field']);
+        Setting::put(MicrobizzSettings::FILTER_VALUE, $data['filter_value']);
+        Setting::put(MicrobizzSettings::NUMBER_FIELD, $data['number_field']);
+        Setting::put(MicrobizzSettings::NAME_FIELD, $data['name_field']);
+        Setting::put(MicrobizzSettings::NEW_STATUS, $data['new_status']);
+
+        $this->mbForm = $this->currentMicrobizzSettings();
+
+        // Ændres det, hvad der er containere, eller hvor nummer og navn står, skal alt udstyr ses igen.
+        $changed = array_diff_assoc(array_diff_key($this->mbForm, ['new_status' => 1]), array_diff_key($before, ['new_status' => 1])) !== [];
+
+        if ($changed) {
+            MicrobizzImporter::resetTools();
+        }
+
+        $this->flash($changed ? 'Gemt. Alt udstyr gennemgås forfra ved næste hentning.' : 'Gemt.');
+    }
+
+    public function testMicrobizz(): void
+    {
+        try {
+            $this->probe = app(MicrobizzImporter::class)->probe();
+            $this->flash('Forbindelsen til Microbizz virker.');
+        } catch (MicrobizzException $e) {
+            $this->probe = null;
+            $this->flash($e->getMessage(), 'error');
+        }
+    }
+
+    public function syncMicrobizz(bool $fromScratch = false): void
+    {
+        if ($fromScratch) {
+            MicrobizzImporter::resetAll();
+        }
+
+        try {
+            $run = app(MicrobizzImporter::class)->run('admin');
+        } catch (MicrobizzException $e) {
+            $this->flash($e->getMessage(), 'error');
+
+            return;
+        }
+
+        $run->isOk()
+            ? $this->flash('Hentet fra Microbizz: '.$run->summary().'.')
+            : $this->flash('Hentningen fejlede: '.$run->error, 'error');
+    }
+
+    /** @return array{filter_field: string, filter_value: string, number_field: string, name_field: string, new_status: string} */
+    private function currentMicrobizzSettings(): array
+    {
+        return [
+            'filter_field' => MicrobizzSettings::filterField(),
+            'filter_value' => MicrobizzSettings::filterValue(),
+            'number_field' => MicrobizzSettings::numberField(),
+            'name_field' => MicrobizzSettings::nameField(),
+            'new_status' => MicrobizzSettings::newStatus(),
+        ];
+    }
+
+    private function microbizzOn(): bool
+    {
+        return app(MicrobizzClient::class)->isConfigured();
+    }
+
+    /** Hvorfor kunden ikke kan oprettes eller rettes her, eller null. */
+    private function microbizzOwnsCustomer(?Customer $customer): ?string
+    {
+        if ($customer?->isFromMicrobizz()) {
+            return "{$customer->name} kommer fra Microbizz og rettes der.";
+        }
+
+        if ($customer === null && $this->microbizzOn()) {
+            return 'Nye kunder oprettes i Microbizz og hentes herind.';
+        }
+
+        return null;
     }
 
     // ---------- Indstillinger ----------
@@ -391,7 +532,7 @@ class Admin extends Component
 
     public function render()
     {
-        $data = ['tabs' => self::TABS];
+        $data = ['tabs' => self::TABS, 'microbizzOn' => $this->microbizzOn()];
 
         $data += match ($this->tab) {
             'layout' => [
@@ -415,6 +556,15 @@ class Admin extends Component
                 'containers' => Container::query()->with('customer')->search($this->containerSearch)
                     ->orderBy('number')->limit(100)->get(),
                 'totals' => Container::query()->selectRaw('status, count(*) as n')->groupBy('status')->pluck('n', 'status'),
+            ],
+            'microbizz' => [
+                'runs' => MicrobizzSync::query()->orderByDesc('id')->limit(10)->get(),
+                'removed' => Container::query()->whereNotNull('microbizz_removed_at')->orderBy('number')->get(),
+                'linked' => [
+                    'containers' => Container::query()->whereNotNull('microbizz_id')->count(),
+                    'customers' => Customer::query()->whereNotNull('microbizz_id')->count(),
+                ],
+                'toolsSince' => Setting::get(MicrobizzSettings::TOOLS_SINCE),
             ],
             'settings' => [
                 'backups' => array_slice(Backups::all(), 0, 10),

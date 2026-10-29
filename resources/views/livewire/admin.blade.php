@@ -118,6 +118,11 @@
 
         {{-- ================= Containere ================= --}}
         @if ($tab === 'containers')
+            @if ($microbizzOn)
+            <div class="rounded-2xl bg-sky-50 p-4 text-sky-900 ring-1 ring-sky-200">
+                Containere oprettes og rettes i Microbizz. De hentes herind hver time kl. 6 til 18, eller med det samme under fanen Microbizz.
+            </div>
+            @else
             <form wire:submit="createContainer" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-6">
                 <div class="md:col-span-6">
                     <h2 class="text-lg font-semibold">Nye containere</h2>
@@ -155,6 +160,7 @@
                 @error('containerForm.number') <p class="text-red-700 md:col-span-6">{{ $message }}</p> @enderror
                 @error('containerForm.customer_id') <p class="text-red-700 md:col-span-6">{{ $message }}</p> @enderror
             </form>
+            @endif
 
             <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                 <div class="mb-3 flex flex-wrap items-center gap-3">
@@ -169,12 +175,16 @@
                     <tbody>
                         @foreach ($containers as $c)
                             <tr wire:key="c-{{ $c->id }}" class="border-t border-slate-100">
-                                <td class="py-2 font-semibold">{{ $c->number }}</td>
+                                <td class="py-2 font-semibold">
+                                    {{ $c->number }}
+                                    @if ($c->isFromMicrobizz()) <span class="ml-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-800">Microbizz</span> @endif
+                                    @if ($c->microbizz_removed_at) <span class="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-900">Fjernet i Microbizz</span> @endif
+                                </td>
                                 <td>{{ $c->name }}</td>
                                 <td>{{ $c->customer?->name }}</td>
                                 <td class="text-sm">{{ \App\Services\LocationLabel::forContainer($c) }}</td>
                                 <td class="text-right">
-                                    @unless ($c->occupiesSlot())
+                                    @unless ($c->occupiesSlot() || $c->isFromMicrobizz())
                                         <button type="button" wire:click="deleteContainer({{ $c->id }})"
                                                 wire:confirm="Fjern container {{ $c->number }} fra systemet? Historikken bevares i loggen." class="btn-danger h-9 text-sm">Fjern</button>
                                     @endunless
@@ -193,7 +203,11 @@
                 <div class="mb-3 flex flex-wrap items-center gap-3">
                     <h2 class="text-lg font-semibold">Kunder</h2>
                     <input type="search" wire:model.live.debounce.300ms="customerSearch" placeholder="Søg" class="h-10 w-56">
-                    <button type="button" wire:click="editCustomer" class="btn-primary ml-auto h-10">Ny kunde</button>
+                    @unless ($microbizzOn)
+                        <button type="button" wire:click="editCustomer" class="btn-primary ml-auto h-10">Ny kunde</button>
+                    @else
+                        <span class="ml-auto text-sm text-slate-600">Kunder oprettes og rettes i Microbizz.</span>
+                    @endunless
                 </div>
 
                 @if ($editCustomerId !== null)
@@ -223,13 +237,17 @@
                                 <td class="py-2">{{ $cu->number }}</td>
                                 <td class="font-semibold">
                                     <span class="mr-2 inline-block h-3 w-3 rounded-sm align-middle" style="background: {{ $cu->color()['side'] }}"></span>{{ $cu->name }}
+                                    @if ($cu->isFromMicrobizz()) <span class="ml-1 rounded bg-sky-100 px-1.5 py-0.5 text-xs font-medium text-sky-800">Microbizz</span> @endif
+                                    @if ($cu->microbizz_inactive) <span class="ml-1 rounded bg-slate-200 px-1.5 py-0.5 text-xs font-medium text-slate-700">Inaktiv i Microbizz</span> @endif
                                 </td>
                                 <td>{{ $cu->containers_count }}</td>
                                 <td class="space-x-1 text-right">
+                                    @unless ($cu->isFromMicrobizz())
                                     <button type="button" wire:click="editCustomer({{ $cu->id }})" class="btn-secondary h-9 text-sm">Ret</button>
                                     @if ($cu->containers_count === 0)
                                         <button type="button" wire:click="deleteCustomer({{ $cu->id }})" wire:confirm="Slet {{ $cu->name }}?" class="btn-danger h-9 text-sm">Slet</button>
                                     @endif
+                                    @endunless
                                 </td>
                             </tr>
                         @empty
@@ -293,6 +311,180 @@
         @endif
 
         {{-- ================= Indstillinger og backup ================= --}}
+        {{-- ================= Microbizz ================= --}}
+        @if ($tab === 'microbizz')
+            <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                <div class="flex flex-wrap items-center gap-3">
+                    <h2 class="text-lg font-semibold">Microbizz</h2>
+                    @if ($microbizzOn)
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">Slået til</span>
+                    @else
+                        <span class="rounded-full bg-slate-200 px-3 py-1 text-sm font-semibold text-slate-700">Slået fra</span>
+                    @endif
+                    @if ($microbizzOn)
+                        <span class="ml-auto flex flex-wrap gap-2">
+                            <button type="button" wire:click="testMicrobizz" wire:loading.attr="disabled" class="btn-secondary h-10">Test forbindelse</button>
+                            <button type="button" wire:click="syncMicrobizz" wire:loading.attr="disabled" class="btn-primary h-10">Hent nu</button>
+                            <button type="button" wire:click="syncMicrobizz(true)" wire:loading.attr="disabled"
+                                    wire:confirm="Hent alle kunder og alt udstyr forfra? Det tager længere tid, men ændrer ikke, hvor containerne står." class="btn-secondary h-10">Hent alt forfra</button>
+                        </span>
+                    @endif
+                </div>
+
+                @if ($microbizzOn)
+                    <p class="mt-2 text-slate-600">
+                        Kunder og containere hentes automatisk hver time fra kl. 6 til 18. Microbizz bestemmer nummer, navn og kunde; her styres kun, hvor containerne står.
+                        Koblet nu: {{ $linked['customers'] }} kunder og {{ $linked['containers'] }} containere.
+                    </p>
+                    <p wire:loading wire:target="syncMicrobizz,testMicrobizz" class="mt-2 font-semibold text-sky-800">Henter fra Microbizz …</p>
+                @else
+                    <p class="mt-2 text-slate-600">
+                        Integrationen slås til ved at skrive kontraktnummer, API-nøgle, brugernavn og kodeord for en API-bruger i serverens <code>.env</code>
+                        (<code>MICROBIZZ_CONTRACT</code>, <code>MICROBIZZ_APIKEY</code>, <code>MICROBIZZ_USERNAME</code>, <code>MICROBIZZ_PASSWORD</code>).
+                        Indtil da virker alt som før, og containere og kunder oprettes her.
+                    </p>
+                @endif
+            </section>
+
+            @if ($probe)
+                <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                    <h2 class="text-lg font-semibold">Udstyr i Microbizz</h2>
+                    <p class="text-slate-600">{{ $probe['more'] ? 'Mindst ' : '' }}{{ $probe['count'] }} stykker udstyr. Brug det til at vælge, hvad der er containere, og hvor nummeret står.</p>
+                    <div class="mt-3 grid gap-4 md:grid-cols-2">
+                        @foreach (['groups' => 'Grupper', 'classes' => 'Klasser'] as $key => $title)
+                            <div>
+                                <h3 class="font-semibold">{{ $title }}</h3>
+                                <table class="stat-table mt-1">
+                                    <tbody>
+                                        @foreach ($probe[$key] as $value => $n)
+                                            <tr><td>{{ $value }}</td><td class="num">{{ $n }}</td></tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endforeach
+                    </div>
+                    @if ($probe['samples'] !== [])
+                        <h3 class="mt-4 font-semibold">Eksempler</h3>
+                        <div class="overflow-x-auto">
+                            <table class="stat-table mt-1">
+                                <thead>
+                                    <tr>
+                                        @foreach (array_keys($probe['samples'][0]) as $field)
+                                            <th>{{ \App\Services\Microbizz\MicrobizzSettings::NUMBER_FIELDS[$field] ?? ['groupid' => 'Gruppe-id', 'group' => 'Gruppe', 'class' => 'Klasse', 'model' => 'Model'][$field] ?? $field }}</th>
+                                        @endforeach
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($probe['samples'] as $sample)
+                                        <tr>@foreach ($sample as $v)<td>{{ $v }}</td>@endforeach</tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @endif
+                </section>
+            @endif
+
+            <form wire:submit="saveMicrobizz" class="grid gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 md:grid-cols-3">
+                <div class="md:col-span-3">
+                    <h2 class="text-lg font-semibold">Hvad er containere?</h2>
+                    <p class="text-sm text-slate-600">Kun udstyr, der passer, hentes som containere. Indtil der er valgt, hentes kun kunder.</p>
+                </div>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Udstyr hvor</span>
+                    <select wire:model.live="mbForm.filter_field" class="mt-1 h-11 w-full">
+                        @foreach (\App\Services\Microbizz\MicrobizzSettings::FILTER_FIELDS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                @if (($mbForm['filter_field'] ?? '') !== 'all')
+                    <label class="block md:col-span-2">
+                        <span class="text-sm text-slate-600">er lig med</span>
+                        <input type="text" wire:model="mbForm.filter_value" class="mt-1 h-11 w-full" placeholder="f.eks. Container">
+                        @error('mbForm.filter_value') <span class="mt-1 block text-red-700">{{ $message }}</span> @enderror
+                    </label>
+                @else
+                    <div class="md:col-span-2"></div>
+                @endif
+                <label class="block">
+                    <span class="text-sm text-slate-600">Containernummeret står i</span>
+                    <select wire:model="mbForm.number_field" class="mt-1 h-11 w-full">
+                        @foreach (\App\Services\Microbizz\MicrobizzSettings::NUMBER_FIELDS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Navnet står i</span>
+                    <select wire:model="mbForm.name_field" class="mt-1 h-11 w-full">
+                        @foreach (\App\Services\Microbizz\MicrobizzSettings::NAME_FIELDS as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="block">
+                    <span class="text-sm text-slate-600">Nye containere kommer ind som</span>
+                    <select wire:model="mbForm.new_status" class="mt-1 h-11 w-full">
+                        @foreach (\App\Services\Microbizz\MicrobizzSettings::NEW_STATUSES as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <p class="text-sm text-slate-600 md:col-span-3">
+                    Ved første import kan det være nemmest at lade nye containere komme ind som udleveret og så sætte dem, der står hjemme, på plads fra tavlen med “Kommer hjem”.
+                    Bagefter sættes det tilbage til “Venter på plads”.
+                </p>
+                <div class="md:col-span-3"><button type="submit" class="btn-primary h-11">Gem</button></div>
+            </form>
+
+            @if ($removed->isNotEmpty())
+                <section class="rounded-2xl bg-amber-50 p-4 shadow-sm ring-1 ring-amber-200">
+                    <h2 class="text-lg font-semibold text-amber-900">Fjernet i Microbizz, men står stadig her ({{ $removed->count() }})</h2>
+                    <p class="text-amber-900">De er slettet, deaktiveret eller flyttet ud af gruppen i Microbizz. De bliver på tavlen, til de er udleveret eller rettet i Microbizz.</p>
+                    <ul class="mt-2 divide-y divide-amber-100">
+                        @foreach ($removed as $c)
+                            <li class="flex flex-wrap gap-3 py-2">
+                                <span class="font-semibold">{{ $c->number }}</span>
+                                <span>{{ \App\Services\LocationLabel::forContainer($c) }}</span>
+                                <span class="text-sm text-amber-800">siden {{ $c->microbizz_removed_at->format('d-m-Y H:i') }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endif
+
+            <section class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                <h2 class="text-lg font-semibold">Seneste hentninger</h2>
+                <table class="stat-table mt-2">
+                    <thead><tr><th>Tidspunkt</th><th>Startet fra</th><th>Resultat</th></tr></thead>
+                    <tbody>
+                        @forelse ($runs as $run)
+                            <tr wire:key="run-{{ $run->id }}">
+                                <td class="whitespace-nowrap align-top">{{ $run->started_at->format('d-m-Y H:i') }}</td>
+                                <td class="align-top">{{ $run->triggerLabel() }}</td>
+                                <td>
+                                    @if ($run->status === 'running')
+                                        <span class="text-slate-600">I gang …</span>
+                                    @elseif ($run->isOk())
+                                        {{ $run->summary() }}
+                                    @else
+                                        <span class="font-semibold text-red-700">Fejl: {{ $run->error }}</span>
+                                    @endif
+                                    @foreach ($run->notes ?? [] as $note)
+                                        <div class="text-sm text-amber-800">{{ $note }}</div>
+                                    @endforeach
+                                </td>
+                            </tr>
+                        @empty
+                            <tr><td colspan="3" class="text-slate-500">Der er ikke hentet noget endnu.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </section>
+        @endif
+
         @if ($tab === 'settings')
             <form wire:submit="saveSettings" class="flex flex-wrap items-end gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
                 <label class="block">

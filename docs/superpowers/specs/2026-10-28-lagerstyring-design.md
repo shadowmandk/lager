@@ -151,6 +151,19 @@ Egen side i menuen for alle medarbejdere. Ændrer intet. Viser
 
 Fortrudte handlinger og fortrydelser tæller ikke med. Under hver graf kan tallene vises som tabel.
 
+### 6.8 Microbizz-integration
+Kundens masterdata ligger i Microbizz. Systemet henter kunder og containere derfra og skriver aldrig tilbage. Systemet ejer kun, hvor containerne står.
+
+- **Adgang:** Kontraktnummer, API-nøgle, brugernavn og kodeord ligger i `.env` (`MICROBIZZ_*`). Er de tomme, er integrationen slået fra, og alt virker som før.
+- **Kunder:** `GetCustomersByLastChange`. Kobles på Microbizz-id, ellers på kundenummer. Navn og nummer opdateres. En deaktiveret eller slettet kunde markeres inaktiv, men slettes ikke.
+- **Containere:** Udstyr fra `GetToolsByLastChange`. Under Opsætning vælges, hvilke stykker udstyr der er containere: et felt (gruppe, klasse eller gruppe-id) og en værdi. Man vælger også, hvilket felt der er containernummeret (nummer, kode, stregkode, serienummer eller navn), og hvilket felt der er navnet. Kunden er udstyrets tilknyttede kunde (`attachedcustomerid`). En kunde, der ikke er hentet endnu, hentes med `GetCustomerByID`.
+- **Kobling:** Containere kobles på Microbizz-id, ellers på nummeret, uden hensyn til store og små bogstaver. Nye containere oprettes med den status, der er valgt under Opsætning: "venter på plads" (standard) eller "udleveret", hvilket bruges ved første import. Hentningen ændrer aldrig status eller plads for en eksisterende container.
+- **Fjernet i Microbizz:** Dækker slettet, deaktiveret eller ikke længere i den valgte gruppe. Står containeren på lageret eller er i transit, bliver den på tavlen med advarslen "Fjernet i Microbizz", og kontoret tager stilling. Ellers skjules den (soft delete). Kommer den tilbage, fjernes advarslen igen.
+- **Microbizz bestemmer:** For koblede containere kan nummer, navn og kunde ikke rettes her: ikke i panelet, ikke ved hjemkomst og ikke ved fortryd. For koblede kunder kan nummer og navn ikke rettes. Når integrationen er slået til, oprettes nye containere og kunder kun i Microbizz. "Ny container" på tavlen bliver til "Hent nye fra Microbizz".
+- **Log:** Ændringer fra Microbizz logges som "Opdateret fra Microbizz" med Microbizz som afsender. De kan ikke fortrydes.
+- **Hvornår:** Hver time kl. 6 til 18 via Laravels planlægger, og med knapperne "Hent nu" og "Hent alt forfra" under Opsætning samt "Hent nye fra Microbizz" på tavlen. Hver hentning tager kun ændringer siden sidst og bruger Microbizz' egen dato og tid som nyt udgangspunkt. Store svar hentes i flere omgange med `resumekey`. Der kan kun køre én hentning ad gangen. Udgangspunktet flyttes kun, når en hentning lykkes. Når udvælgelsen eller felterne ændres, hentes udstyret forfra.
+- **Opsætning, fanen Microbizz:** Viser om integrationen er slået til, og har en knap "Test forbindelse", der viser antal udstyr og de grupper og klasser, der findes, med eksempler på felterne. Her ligger også indstillingerne og de seneste 10 hentninger med antal og fejl. Til sidst listen over containere på lageret, der er fjernet i Microbizz.
+
 ## 7. Isometrisk visning
 
 - Hver række tegnes som én SVG: dybden går vandret (dybde 1 til venstre ved indgangen), højden går opad, og hver container er en kasse set skråt fra siden, så siden, enden og toppen er synlige. Ingen container skjuler en anden.
@@ -197,6 +210,7 @@ Livewire-komponenterne testes let (siden renderer, flytning via komponent skrive
 ## 11. Drift
 
 - Hosting hos Curanet (VPS eller webhotel med PHP 8.4). Almindelig Laravel-udrulning med HTTPS.
+- Cron kører `php artisan schedule:run` hvert minut; den står for backup og Microbizz-hentning.
 - Databasen er én SQLite-fil i `storage/`. En planlagt kommando (`backup:run`) tager dagligt en kopi til `storage/backups/`, beholder de seneste 30, og den seneste kan hentes fra opsætningssiden.
 - Ingen offline-tilstand. Tabletten skal have net; skærmen viser tydeligt, når den ikke har.
 
