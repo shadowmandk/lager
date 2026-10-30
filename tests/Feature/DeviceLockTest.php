@@ -102,9 +102,13 @@ it('stays locked until a code has been chosen', function () {
 
 it('sets the code from ACCESS_CODE once, and from the command', function () {
     App\Models\Setting::put('access.code_hash', null);
-    putenv('ACCESS_CODE=975310');
-    (new Database\Seeders\AccessCodeSeeder)->run();
-    putenv('ACCESS_CODE');
+    // Laravel læser $_SERVER og $_ENV før putenv, og .env kan have en tom ACCESS_CODE.
+    $_SERVER['ACCESS_CODE'] = $_ENV['ACCESS_CODE'] = '975310';
+    try {
+        (new Database\Seeders\AccessCodeSeeder)->run();
+    } finally {
+        unset($_SERVER['ACCESS_CODE'], $_ENV['ACCESS_CODE']);
+    }
 
     Livewire::test(UnlockScreen::class)->call('unlock', '975310')->assertRedirect(route('operator.pick'));
 
