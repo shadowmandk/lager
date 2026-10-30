@@ -213,9 +213,9 @@ Livewire-komponenterne testes let (siden renderer, flytning via komponent skrive
 
 ## 11. Drift
 
-- Hosting på VPS hos Curanet (Ubuntu 24.04, nginx, PHP 8.4, Let's Encrypt) på lager.itxpartner.dk. `deploy/setup-server.sh` klargør serveren, `deploy/deploy.sh` opdaterer fra det private GitHub-repo. Se DEPLOY.md.
+- Hosting på VPS hos hosting.gl (Ubuntu 24.04, nginx, PHP 8.4, MySQL, Let's Encrypt) på lager.itxpartner.dk. `deploy/setup-server.sh` klargør serveren, `deploy/deploy.sh` opdaterer fra det private GitHub-repo. Se DEPLOY.md.
 - Cron kører `php artisan schedule:run` hvert minut; den står for backup og Microbizz-hentning.
-- Databasen er én SQLite-fil i `storage/`. En planlagt kommando (`backup:run`) tager dagligt en kopi til `storage/backups/`, beholder de seneste 30, og den seneste kan hentes fra opsætningssiden.
+- Databasen er MySQL i drift (SQLite lokalt og i tests). En planlagt kommando (`backup:run`) tager dagligt et komprimeret dump med mysqldump til `storage/backups/`, beholder de seneste 30, og de kan hentes fra opsætningssiden. `lager:fra-sqlite` flytter data fra en gammel SQLite-fil.
 - Ingen offline-tilstand. Tabletten skal have net; skærmen viser tydeligt, når den ikke har.
 
 ## 12. Bevidst udeladt (kan komme senere)

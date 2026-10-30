@@ -7,7 +7,7 @@ Webbaseret styring af skibscontainere på to lagre. Erstatter en magnettavle. Br
 - Drift: `DEPLOY.md`
 
 ## Stak
-PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire`), Tailwind 4 via Vite, SQLite, Pest. Al brugertekst er dansk.
+PHP 8.4 (Herd lokalt), Laravel 13, Livewire 4 (klassekomponenter i `app/Livewire`), Tailwind 4 via Vite, Pest. MySQL i drift, SQLite lokalt og i tests; GitHub Actions kører alle tests mod begge, så brug kun SQL, der virker begge steder. Al brugertekst er dansk.
 
 ## Kerneregler (må ikke brydes)
 - En række tilgås kun fra dybde 1. Man kan kun tage den øverste container i den forreste ikke-tomme kolonne.

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# Klargør en ny Ubuntu 24.04-VPS til Lagerstyring. Køres én gang som root:
+# Klargør en ny Ubuntu 24.04-VPS (hosting.gl) til Lagerstyring. Køres én gang som root:
 #
 #   sudo bash setup-server.sh lager.itxpartner.dk git@github.com:shadowmandk/lager.git din@email.dk
 #
-# Installerer PHP 8.4, nginx, Composer, HTTPS-certifikat (Let's Encrypt), firewall og cron.
-# Opretter brugeren "lager", som ejer koden og kører PHP. Scriptet kan køres igen uden skade.
+# Installerer PHP 8.4, MySQL, nginx, Composer, HTTPS-certifikat (Let's Encrypt), firewall og cron.
+# Opretter brugeren "lager", som ejer koden og kører PHP, og databasen "lager" med egen MySQL-bruger.
+# Scriptet kan køres igen uden skade.
 #
 set -euo pipefail
 
@@ -25,8 +26,8 @@ apt-get update -q
 apt-get install -yq software-properties-common ca-certificates curl unzip git sqlite3 ufw unattended-upgrades
 add-apt-repository -y ppa:ondrej/php
 apt-get update -q
-apt-get install -yq nginx certbot python3-certbot-nginx \
-    php$PHP-fpm php$PHP-cli php$PHP-sqlite3 php$PHP-mbstring php$PHP-xml php$PHP-curl \
+apt-get install -yq nginx certbot python3-certbot-nginx mysql-server \
+    php$PHP-fpm php$PHP-cli php$PHP-mysql php$PHP-sqlite3 php$PHP-mbstring php$PHP-xml php$PHP-curl \
     php$PHP-zip php$PHP-intl php$PHP-bcmath php$PHP-opcache
 
 echo "==> Composer"
@@ -50,6 +51,25 @@ if [[ ! -f /home/$APP_USER/.ssh/id_ed25519 ]]; then
     sudo -u $APP_USER ssh-keygen -t ed25519 -N "" -C "lager@$DOMAIN" -f /home/$APP_USER/.ssh/id_ed25519 -q
 fi
 sudo -u $APP_USER sh -c 'ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts'
+
+echo "==> MySQL"
+# Kun adgang fra serveren selv (Ubuntus standard er bind-address 127.0.0.1).
+systemctl enable --now mysql
+DB_FILE=/home/$APP_USER/.lager-db
+if [[ ! -f $DB_FILE ]]; then
+    DB_PASS="$(openssl rand -base64 33 | tr -d '/+=' | cut -c1-32)"
+    mysql <<SQL
+CREATE DATABASE IF NOT EXISTS lager CHARACTER SET utf8mb4 COLLATE utf8mb4_danish_ci;
+CREATE USER IF NOT EXISTS 'lager'@'localhost' IDENTIFIED BY '$DB_PASS';
+ALTER USER 'lager'@'localhost' IDENTIFIED BY '$DB_PASS';
+GRANT ALL PRIVILEGES ON lager.* TO 'lager'@'localhost';
+FLUSH PRIVILEGES;
+SQL
+    # Adgangskoden gemmes kun her, læsbar for brugeren lager. Den kopieres ind i .env ved installation.
+    install -m 600 -o $APP_USER -g $APP_USER /dev/null $DB_FILE
+    printf 'DB_CONNECTION=mysql\nDB_HOST=127.0.0.1\nDB_PORT=3306\nDB_DATABASE=lager\nDB_USERNAME=lager\nDB_PASSWORD=%s\n' "$DB_PASS" > $DB_FILE
+    unset DB_PASS
+fi
 
 echo "==> PHP"
 cat > /etc/php/$PHP/fpm/pool.d/lager.conf <<EOF
